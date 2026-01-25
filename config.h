@@ -3,13 +3,25 @@
 
 #include <Arduino.h>
 
-// ===================================
-// Piny RS485 dla ES32C14 (ESP32-C3)
-// ===================================
-#define RS485_RX_PIN    20        // UART RX
-#define RS485_TX_PIN    21        // UART TX
-#define RS485_DE_RE_PIN 19        // Direction Enable (DE) i Receive Enable (RE)
-#define SERIAL_MODBUS   Serial1   // UART1
+// ============================================
+// PINY RS485 DLA PŁYTKI ES32C14
+// ============================================
+// Zgodnie z dokumentacją ElecTechSup ES32C14:
+// - RS485 Port używa GPIO: 1, 3, 22
+// - IO1 (GPIO1)  → RS485 DI (Transmit)
+// - IO3 (GPIO3)  → RS485 RO (Receive) 
+// - IO22 (GPIO22)→ RS485 DE/RE (Direction Enable)
+
+#define RS485_TX_PIN     1   // IO1 → DI (Data Input do RS485)
+#define RS485_RX_PIN     3   // IO3 → RO (Receive Output z RS485)
+#define RS485_DE_RE_PIN  22  // IO22 → DE+RE (Direction Enable)
+#define SERIAL_MODBUS   Serial0   // UART0 (GPIO 1, 3)
+
+// UWAGA: ESP32-C3 ma ograniczenia pinów UART
+// GPIO 1, 3 mogą wymagać użycia Serial0 lub konfiguracji niestandardowej
+// Sprawdź czy nie kolidują z USB Serial (używanym do debugowania)
+// Alternatywnie rozważ użycie innych pinów z Free Port:
+// IO33, IO32, IO15, IO2, IO0, IO4, IO16, IO21, IO23
 
 // ===================================
 // Parametry Modbus
