@@ -114,9 +114,9 @@ Przycisk (NPN)
 
 ## 📷 Zdjęcia ze schematu
 
-![Wiring Diagram ES32C14](docs/images/es32c14-wiring.jpg)
+![Wiring Diagram ES32C14](docs/images/es32c14-wiring.avif)
 
-![Board Interfaces](docs/images/es32c14-interfaces.jpg)
+![Board Interfaces](docs/images/es32c14-interfaces.avif)
 
 ---
 

@@ -133,7 +133,7 @@ The project is designed for **ElecTechSup ES32C14** board (ESP32-C3) with built-
 
 ### 📷 Board Documentation:
 
-![ES32C14 Board](docs/images/es32c14-interfaces.jpg)
+![ES32C14 Board](docs/images/es32c14-interfaces.avif)
 
 **Full specification:** See [docs/ES32C14_HARDWARE_EN.md](docs/ES32C14_HARDWARE_EN.md)
 
@@ -156,7 +156,7 @@ ES32C14 (IO1, IO3, IO22) → Built-in RS485 → A/B → PLC Modbus
                                        120Ω Resistor (optional)
 ```
 
-![Wiring Diagram](docs/images/es32c14-wiring.jpg)
+![Wiring Diagram](docs/images/es32c14-wiring.avif)
 
 ---
 
