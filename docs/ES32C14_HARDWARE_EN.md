@@ -157,7 +157,7 @@ The board has a built-in AC/DC power supply allowing direct connection to 230V A
 ## 🔗 Links
 
 - **Manufacturer Documentation:** [ElecTechSup ES32C14](https://www.electechsup.com/)
-- **ESP32-C3 Datasheet:** [Espressif](https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf)
+- **ESP32-C3 Datasheet:** [Espressif ESP32-C3 Product Page](https://www.espressif.com/en/products/socs/esp32-c3)
 - **Arduino Code:** [OPEC-SIMPLE-ESP32C14](https://github.com/IT-Buster/OPEC-SIMPLE-ESP32C14)
 
 ---

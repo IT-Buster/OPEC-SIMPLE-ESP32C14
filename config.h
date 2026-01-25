@@ -19,7 +19,7 @@
 
 // UWAGA: ESP32-C3 ma ograniczenia pinów UART
 // GPIO 1, 3 mogą wymagać użycia Serial0 lub konfiguracji niestandardowej
-// Sprawdź czy nie kolidują z USB Serial (używanym do debugowania)
+// Sprawdź czy nie kolidują z USB Serial (używany do debugowania)
 // Alternatywnie rozważ użycie innych pinów z Free Port:
 // IO33, IO32, IO15, IO2, IO0, IO4, IO16, IO21, IO23
 
