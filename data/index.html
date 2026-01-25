@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <h1>🔥 OPEC Sterownik</h1>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/curve.html">Krzywa</a>
+      <a href="/settings.html">Ustawienia</a>
+    </div>
+  </nav>
+  
+  <main>
+    <div class="card">
+      <h2>Temperatura CO</h2>
+      <div class="value" id="tempCO">--</div>
+      <span class="unit">°C</span>
+    </div>
+    
+    <div class="card">
+      <h2>Temperatura zewnętrzna</h2>
+      <div class="value" id="tempEXT">--</div>
+      <span class="unit">°C</span>
+    </div>
+    
+    <div class="card">
+      <h2>Temperatura zadana</h2>
+      <div class="value" id="tempTarget">--</div>
+      <span class="unit">°C</span>
+    </div>
+    
+    <div class="card">
+      <h2>Pozycja siłownika</h2>
+      <div class="value" id="actuatorPos">--</div>
+      <span class="unit">%</span>
+    </div>
+    
+    <div class="card full-width">
+      <h2>Status systemu</h2>
+      <div class="status-row">
+        <span>Termostat:</span>
+        <span id="thermostatStatus" class="badge">--</span>
+      </div>
+      <div class="status-row">
+        <span>Połączenie Modbus:</span>
+        <span id="modbusStatus" class="badge">--</span>
+      </div>
+      <div class="status-row">
+        <span>Sygnał WiFi:</span>
+        <span id="wifiStatus" class="badge">--</span>
+      </div>
+      <div class="status-row">
+        <span>Czas pracy:</span>
+        <span id="uptime">--</span>
+      </div>
+      <div class="status-row">
+        <span>Wolna pamięć:</span>
+        <span id="freeHeap">--</span>
+      </div>
+    </div>
+    
+    <div class="card full-width">
+      <h2>Sterowanie termostatem</h2>
+      <div class="status-row">
+        <span>Tryb AUTO:</span>
+        <label class="switch">
+          <input type="checkbox" id="thermostatToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </main>
+  
+  <script src="script.js"></script>
+</body>
+</html>

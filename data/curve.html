@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Krzywa grzewcza</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <h1>🔥 OPEC Sterownik</h1>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/curve.html">Krzywa</a>
+      <a href="/settings.html">Ustawienia</a>
+    </div>
+  </nav>
+  
+  <main>
+    <div class="card full-width">
+      <h2>Krzywa grzewcza</h2>
+      <p style="color: #707070; margin-bottom: 1rem;">
+        Automatyczne obliczanie temperatury zadanej CO na podstawie temperatury zewnętrznej.
+      </p>
+      
+      <div id="message" class="message"></div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Temperatura zewnętrzna (°C)</th>
+            <th>Temperatura CO (°C)</th>
+          </tr>
+        </thead>
+        <tbody id="curveTable">
+          <!-- Wypełniane dynamicznie przez JavaScript -->
+        </tbody>
+      </table>
+      
+      <div class="button-group">
+        <button onclick="saveCurve()">💾 Zapisz krzywą</button>
+        <button class="secondary" onclick="loadCurve()">🔄 Odśwież</button>
+        <button class="danger" onclick="resetCurve()">⚠️ Przywróć domyślne</button>
+      </div>
+    </div>
+  </main>
+  
+  <script>
+    // Domyślna krzywa grzewcza
+    const defaultCurve = [
+      [-20, 65],
+      [-15, 60],
+      [-10, 55],
+      [-5, 50],
+      [0, 45],
+      [5, 40],
+      [10, 35],
+      [15, 30],
+      [20, 25]
+    ];
+    
+    // Wczytanie krzywej z serwera
+    async function loadCurve() {
+      try {
+        const response = await fetch('/api/curve');
+        const data = await response.json();
+        
+        const tableBody = document.getElementById('curveTable');
+        tableBody.innerHTML = '';
+        
+        data.curve.forEach((point, index) => {
+          const row = tableBody.insertRow();
+          
+          const cell1 = row.insertCell(0);
+          cell1.innerHTML = '<input type="number" step="0.1" value="' + point[0] + '" id="temp_ext_' + index + '">';
+          
+          const cell2 = row.insertCell(1);
+          cell2.innerHTML = '<input type="number" step="0.1" value="' + point[1] + '" id="temp_co_' + index + '">';
+        });
+        
+        showMessage('Krzywa wczytana', 'success');
+      } catch (error) {
+        console.error('Błąd wczytywania krzywej:', error);
+        showMessage('Błąd wczytywania krzywej', 'error');
+      }
+    }
+    
+    // Zapis krzywej na serwer
+    async function saveCurve() {
+      const curve = [];
+      
+      for (let i = 0; i < 9; i++) {
+        const tempExt = parseFloat(document.getElementById('temp_ext_' + i).value);
+        const tempCO = parseFloat(document.getElementById('temp_co_' + i).value);
+        curve.push([tempExt, tempCO]);
+      }
+      
+      try {
+        const response = await fetch('/api/curve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ curve: curve })
+        });
+        
+        if (response.ok) {
+          showMessage('Krzywa zapisana pomyślnie!', 'success');
+        } else {
+          showMessage('Błąd zapisu krzywej', 'error');
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        showMessage('Błąd połączenia z serwerem', 'error');
+      }
+    }
+    
+    // Reset krzywej do wartości domyślnych
+    function resetCurve() {
+      if (!confirm('Czy na pewno chcesz przywrócić domyślną krzywą grzewczą?')) {
+        return;
+      }
+      
+      const tableBody = document.getElementById('curveTable');
+      tableBody.innerHTML = '';
+      
+      defaultCurve.forEach((point, index) => {
+        const row = tableBody.insertRow();
+        
+        const cell1 = row.insertCell(0);
+        cell1.innerHTML = '<input type="number" step="0.1" value="' + point[0] + '" id="temp_ext_' + index + '">';
+        
+        const cell2 = row.insertCell(1);
+        cell2.innerHTML = '<input type="number" step="0.1" value="' + point[1] + '" id="temp_co_' + index + '">';
+      });
+      
+      showMessage('Przywrócono domyślną krzywą. Kliknij "Zapisz" aby potwierdzić.', 'success');
+    }
+    
+    // Wyświetlanie komunikatów
+    function showMessage(text, type) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = text;
+      messageEl.className = 'message ' + type + ' show';
+      
+      setTimeout(() => {
+        messageEl.className = 'message';
+      }, 5000);
+    }
+    
+    // Wczytaj krzywą przy starcie
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCurve();
+    });
+  </script>
+</body>
+</html>
