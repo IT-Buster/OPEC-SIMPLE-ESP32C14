@@ -1,0 +1,33 @@
+# Arduino IDE
+*.ino.bin
+*.ino.elf
+*.ino.map
+*.ino.eep
+*.ino.hex
+
+# Build artifacts
+build/
+*.o
+*.d
+*.a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets (jeśli ktoś doda)
+secrets.h
+credentials.h
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak

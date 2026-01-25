@@ -1,0 +1,13 @@
+# Wymagane biblioteki Arduino dla projektu OPEC-SIMPLE-ESP32C14
+# Instaluj przez Arduino IDE -> Tools -> Manage Libraries
+
+ModbusMaster by Doc Walker (v2.0.1 lub nowsza)
+ESPAsyncWebServer by me-no-dev (https://github.com/me-no-dev/ESPAsyncWebServer)
+AsyncTCP by me-no-dev (https://github.com/me-no-dev/AsyncTCP)
+ArduinoJson by Benoit Blanchon (v6.21.0 lub nowsza)
+
+# Biblioteki wbudowane w ESP32 (nie wymagają instalacji):
+# - WiFi
+# - Preferences
+# - SPIFFS
+# - ESPmDNS

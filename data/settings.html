@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Ustawienia</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <h1>🔥 OPEC Sterownik</h1>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/curve.html">Krzywa</a>
+      <a href="/settings.html">Ustawienia</a>
+    </div>
+  </nav>
+  
+  <main>
+    <div class="card full-width">
+      <h2>⚙️ Ustawienia WiFi</h2>
+      
+      <div id="message" class="message"></div>
+      
+      <div class="form-group">
+        <label for="wifiSSID">Nazwa sieci (SSID):</label>
+        <input type="text" id="wifiSSID" placeholder="Nazwa sieci WiFi">
+      </div>
+      
+      <div class="form-group">
+        <label for="wifiPassword">Hasło WiFi:</label>
+        <input type="password" id="wifiPassword" placeholder="Hasło (pozostaw puste aby nie zmieniać)">
+      </div>
+      
+      <h2 style="margin-top: 2rem;">🔌 Ustawienia Modbus</h2>
+      
+      <div class="form-group">
+        <label for="modbusUnitID">Adres Unit ID:</label>
+        <input type="number" id="modbusUnitID" min="1" max="247" value="2">
+      </div>
+      
+      <div class="form-group">
+        <label for="modbusBaudrate">Prędkość transmisji (baud):</label>
+        <select id="modbusBaudrate">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+        </select>
+      </div>
+      
+      <h2 style="margin-top: 2rem;">🌡️ Parametry termostatu</h2>
+      
+      <div class="form-group">
+        <label for="hysteresis">Histereza (°C):</label>
+        <input type="number" id="hysteresis" step="0.1" min="0.1" max="5.0" value="1.0">
+        <small style="color: #707070;">Wartość domyślna: 1.0°C (zalecane 0.5 - 2.0°C)</small>
+      </div>
+      
+      <div class="button-group">
+        <button onclick="saveSettings()">💾 Zapisz ustawienia</button>
+        <button class="secondary" onclick="loadSettings()">🔄 Odśwież</button>
+        <button class="danger" onclick="resetSettings()">⚠️ Reset do fabrycznych</button>
+      </div>
+      
+      <p style="margin-top: 1rem; color: #707070; font-size: 0.9rem;">
+        ⚠️ Uwaga: Po zmianie ustawień WiFi lub Modbus wymagany jest restart urządzenia.
+      </p>
+    </div>
+  </main>
+  
+  <script>
+    // Wczytanie ustawień z serwera
+    async function loadSettings() {
+      try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        
+        document.getElementById('wifiSSID').value = data.wifiSSID || '';
+        document.getElementById('modbusUnitID').value = data.modbusUnitID || 2;
+        document.getElementById('modbusBaudrate').value = data.modbusBaudrate || 115200;
+        document.getElementById('hysteresis').value = data.hysteresis || 1.0;
+        
+        showMessage('Ustawienia wczytane', 'success');
+      } catch (error) {
+        console.error('Błąd wczytywania ustawień:', error);
+        showMessage('Błąd wczytywania ustawień', 'error');
+      }
+    }
+    
+    // Zapis ustawień na serwer
+    async function saveSettings() {
+      const settings = {
+        wifiSSID: document.getElementById('wifiSSID').value,
+        modbusUnitID: parseInt(document.getElementById('modbusUnitID').value),
+        modbusBaudrate: parseInt(document.getElementById('modbusBaudrate').value),
+        hysteresis: parseFloat(document.getElementById('hysteresis').value)
+      };
+      
+      // Dodaj hasło WiFi tylko jeśli zostało wprowadzone
+      const password = document.getElementById('wifiPassword').value;
+      if (password.length > 0) {
+        settings.wifiPassword = password;
+      }
+      
+      try {
+        const response = await fetch('/api/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+          const result = await response.text();
+          showMessage('Ustawienia zapisane! ' + result, 'success');
+          
+          // Wyczyść pole hasła
+          document.getElementById('wifiPassword').value = '';
+        } else {
+          showMessage('Błąd zapisu ustawień', 'error');
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        showMessage('Błąd połączenia z serwerem', 'error');
+      }
+    }
+    
+    // Reset ustawień do fabrycznych
+    async function resetSettings() {
+      if (!confirm('Czy na pewno chcesz zresetować ustawienia do wartości fabrycznych?\n\nUrządzenie zostanie zrestartowane!')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/reset', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          showMessage('Resetowanie... Urządzenie zostanie zrestartowane.', 'success');
+          
+          setTimeout(() => {
+            location.href = '/';
+          }, 3000);
+        } else {
+          showMessage('Błąd resetowania', 'error');
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        showMessage('Błąd połączenia z serwerem', 'error');
+      }
+    }
+    
+    // Wyświetlanie komunikatów
+    function showMessage(text, type) {
+      const messageEl = document.getElementById('message');
+      messageEl.textContent = text;
+      messageEl.className = 'message ' + type + ' show';
+      
+      setTimeout(() => {
+        messageEl.className = 'message';
+      }, 5000);
+    }
+    
+    // Wczytaj ustawienia przy starcie
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSettings();
+    });
+  </script>
+</body>
+</html>
