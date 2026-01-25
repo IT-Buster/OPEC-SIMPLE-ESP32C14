@@ -17,11 +17,16 @@
  * Bazuje na projekcie: OPEC-SIMPLE (Node-RED)
  */
 
+// Biblioteki systemowe ESP32
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <Preferences.h>
+
+// Biblioteki projektu
 #include "config.h"
 #include "modbus_handler.h"
 #include "thermostat.h"
 #include "web_server.h"
-#include <Preferences.h>
 
 // ===================================
 // Obiekt Preferences (zapis konfiguracji)
