@@ -6,12 +6,601 @@
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
 
 // ===================================
 // Obiekt serwera WWW
 // ===================================
 AsyncWebServer server(80);
+
+// ===================================
+// HTML wbudowany jako PROGMEM
+// ===================================
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { 
+      text-align: center; 
+      color: white; 
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    .header p { font-size: 1.1em; opacity: 0.9; }
+    
+    .card { 
+      background: white; 
+      border-radius: 15px; 
+      padding: 25px; 
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s;
+    }
+    .card:hover { transform: translateY(-5px); }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    .status-connected { background: #10b981; color: white; }
+    .status-disconnected { background: #ef4444; color: white; }
+    
+    .temp-display {
+      font-size: 3em;
+      font-weight: bold;
+      color: #667eea;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .temp-label {
+      font-size: 1.2em;
+      color: #666;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+      gap: 20px; 
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 30px;
+      background: #e5e7eb;
+      border-radius: 15px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.5s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    nav {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+    nav a:hover { background: #764ba2; }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-weight: 600; color: #666; }
+    .info-value { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏠 OPEC ESP32</h1>
+      <p>Sterownik systemu grzewczego</p>
+    </div>
+    
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/settings.html">Ustawienia</a>
+      <a href="/curve.html">Krzywa grzewcza</a>
+    </nav>
+    
+    <div class="card">
+      <h2>Status systemu</h2>
+      <div style="margin-top: 15px;">
+        <span class="status-badge" id="statusBadge">⏳ Łączenie...</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Czas pracy:</span>
+        <span class="info-value" id="uptime">--</span>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <div class="temp-label">🔥 Temperatura CO</div>
+        <div class="temp-display" id="tempCO">--°C</div>
+      </div>
+      
+      <div class="card">
+        <div class="temp-label">🌡️ Temperatura zewnętrzna</div>
+        <div class="temp-display" id="tempEXT">--°C</div>
+      </div>
+      
+      <div class="card">
+        <div class="temp-label">🎯 Temperatura zadana</div>
+        <div class="temp-display" id="targetTemp">--°C</div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>⚙️ Siłownik</h2>
+      <div class="progress-bar">
+        <div class="progress-fill" id="actuatorBar" style="width: 0%">
+          <span id="actuatorText">0%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function formatUptime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      return h + 'h ' + m + 'm ' + s + 's';
+    }
+    
+    function updateData() {
+      fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+          // Temperatury
+          document.getElementById('tempCO').innerText = data.tempCO.toFixed(1) + '°C';
+          document.getElementById('tempEXT').innerText = data.tempEXT.toFixed(1) + '°C';
+          document.getElementById('targetTemp').innerText = data.targetTemp.toFixed(1) + '°C';
+          
+          // Status Modbus
+          const badge = document.getElementById('statusBadge');
+          if (data.modbusConnected) {
+            badge.className = 'status-badge status-connected';
+            badge.innerText = '✅ Połączono z PLC';
+          } else {
+            badge.className = 'status-badge status-disconnected';
+            badge.innerText = '❌ Brak połączenia Modbus';
+          }
+          
+          // Siłownik
+          document.getElementById('actuatorBar').style.width = data.actuatorPos + '%';
+          document.getElementById('actuatorText').innerText = data.actuatorPos + '%';
+          
+          // Uptime
+          document.getElementById('uptime').innerText = formatUptime(data.uptime);
+        })
+        .catch(err => {
+          console.error('Błąd odczytu danych:', err);
+        });
+    }
+    
+    // Odświeżanie co 2 sekundy
+    updateData();
+    setInterval(updateData, 2000);
+  </script>
+</body>
+</html>
+)rawliteral";
+
+const char settings_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Ustawienia</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { 
+      text-align: center; 
+      color: white; 
+      margin-bottom: 30px;
+      padding: 20px;
+    }
+    .card { 
+      background: white; 
+      border-radius: 15px; 
+      padding: 30px; 
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    h2 { color: #667eea; margin-bottom: 20px; }
+    
+    .form-group { margin-bottom: 20px; }
+    label { 
+      display: block; 
+      font-weight: 600; 
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border 0.3s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    button {
+      padding: 12px 30px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-right: 10px;
+    }
+    button:hover { background: #764ba2; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
+    
+    nav {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    nav a:hover { background: #764ba2; }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type="checkbox"] {
+      width: auto;
+      transform: scale(1.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ Ustawienia</h1>
+    </div>
+    
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/settings.html">Ustawienia</a>
+      <a href="/curve.html">Krzywa grzewcza</a>
+    </nav>
+    
+    <div class="card">
+      <h2>📡 Konfiguracja WiFi</h2>
+      <div class="form-group">
+        <label>Nazwa sieci (SSID):</label>
+        <input type="text" id="wifiSSID" placeholder="Wprowadź nazwę sieci WiFi">
+      </div>
+      <div class="form-group">
+        <label>Hasło WiFi:</label>
+        <input type="password" id="wifiPass" placeholder="Wprowadź hasło WiFi">
+      </div>
+      <p style="color: #666; font-size: 0.9em;">
+        ℹ️ Po zapisaniu ESP32 zrestartuje się i połączy z podaną siecią.
+      </p>
+    </div>
+    
+    <div class="card">
+      <h2>🔌 Konfiguracja Modbus</h2>
+      <div class="form-group">
+        <label>Baudrate:</label>
+        <select id="modbusBaud">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unit ID (Slave ID):</label>
+        <input type="number" id="modbusID" min="1" max="247" value="5">
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>🌡️ Ustawienia termostatu</h2>
+      <div class="form-group">
+        <label>Histereza (°C):</label>
+        <input type="number" id="hysteresis" step="0.1" min="0.5" max="5.0" value="2.0">
+      </div>
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="thermoActive" checked>
+        <label for="thermoActive">Termostat aktywny</label>
+      </div>
+    </div>
+    
+    <div class="card">
+      <button onclick="saveSettings()">💾 Zapisz ustawienia</button>
+      <button class="danger" onclick="resetSettings()">🔄 Reset fabryczny</button>
+    </div>
+  </div>
+  
+  <script>
+    // Wczytaj obecne ustawienia
+    function loadSettings() {
+      fetch('/api/settings')
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('wifiSSID').value = data.wifiSSID || '';
+          document.getElementById('modbusBaud').value = data.modbusBaudrate || 115200;
+          document.getElementById('modbusID').value = data.modbusUnitID || 5;
+          document.getElementById('hysteresis').value = data.hysteresis || 2.0;
+          document.getElementById('thermoActive').checked = data.thermostatActive !== false;
+        })
+        .catch(err => console.error('Błąd wczytywania ustawień:', err));
+    }
+    
+    function saveSettings() {
+      const data = {
+        wifiSSID: document.getElementById('wifiSSID').value,
+        wifiPass: document.getElementById('wifiPass').value,
+        modbusBaud: parseInt(document.getElementById('modbusBaud').value),
+        modbusID: parseInt(document.getElementById('modbusID').value),
+        hysteresis: parseFloat(document.getElementById('hysteresis').value),
+        thermoActive: document.getElementById('thermoActive').checked
+      };
+      
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        alert('✅ Ustawienia zapisane! ESP32 zrestartuje się za 3 sekundy.');
+      })
+      .catch(err => {
+        alert('❌ Błąd zapisu: ' + err);
+      });
+    }
+    
+    function resetSettings() {
+      if (confirm('Czy na pewno chcesz przywrócić ustawienia fabryczne?')) {
+        fetch('/api/reset', { method: 'POST' })
+        .then(() => {
+          alert('✅ Ustawienia zresetowane! ESP32 zrestartuje się.');
+        });
+      }
+    }
+    
+    loadSettings();
+  </script>
+</body>
+</html>
+)rawliteral";
+
+const char curve_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Krzywa grzewcza</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; color: white; margin-bottom: 30px; padding: 20px; }
+    .card { 
+      background: white; 
+      border-radius: 15px; 
+      padding: 30px; 
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    h2 { color: #667eea; margin-bottom: 20px; }
+    
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f3f4f6; font-weight: 600; }
+    input[type="number"] {
+      width: 100px;
+      padding: 8px;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    button {
+      padding: 12px 30px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover { background: #764ba2; }
+    
+    nav {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+    nav a:hover { background: #764ba2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📈 Krzywa grzewcza</h1>
+    </div>
+    
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/settings.html">Ustawienia</a>
+      <a href="/curve.html">Krzywa grzewcza</a>
+    </nav>
+    
+    <div class="card">
+      <h2>Edycja krzywej (9 punktów)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Punkt</th>
+            <th>Temp. zewnętrzna (°C)</th>
+            <th>Temp. CO (°C)</th>
+          </tr>
+        </thead>
+        <tbody id="curveTable">
+          <!-- Wypełnione przez JavaScript -->
+        </tbody>
+      </table>
+      
+      <button onclick="saveCurve()">💾 Zapisz krzywą</button>
+      <button onclick="loadDefaultCurve()">🔄 Przywróć domyślną</button>
+    </div>
+  </div>
+  
+  <script>
+    const defaultCurve = [
+      [-20, 65], [-15, 60], [-10, 55], [-5, 50], [0, 45],
+      [5, 40], [10, 35], [15, 30], [20, 25]
+    ];
+    
+    function loadCurve() {
+      fetch('/api/curve')
+        .then(r => r.json())
+        .then(data => {
+          renderCurve(data.curve || defaultCurve);
+        })
+        .catch(() => {
+          renderCurve(defaultCurve);
+        });
+    }
+    
+    function renderCurve(curve) {
+      const tbody = document.getElementById('curveTable');
+      tbody.innerHTML = '';
+      curve.forEach((point, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${i + 1}</td>
+            <td><input type="number" id="ext_${i}" value="${point[0]}" step="1"></td>
+            <td><input type="number" id="co_${i}" value="${point[1]}" step="0.5"></td>
+          </tr>
+        `;
+      });
+    }
+    
+    function saveCurve() {
+      const curve = [];
+      for (let i = 0; i < 9; i++) {
+        curve.push([
+          parseFloat(document.getElementById('ext_' + i).value),
+          parseFloat(document.getElementById('co_' + i).value)
+        ]);
+      }
+      
+      fetch('/api/curve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curve })
+      })
+      .then(() => alert('✅ Krzywa zapisana!'))
+      .catch(err => alert('❌ Błąd: ' + err));
+    }
+    
+    function loadDefaultCurve() {
+      if (confirm('Przywrócić domyślną krzywą grzewczą?')) {
+        renderCurve(defaultCurve);
+      }
+    }
+    
+    loadCurve();
+  </script>
+</body>
+</html>
+)rawliteral";
 
 // ===================================
 // Pomocnicza funkcja - generowanie unikalnego SSID
@@ -66,18 +655,31 @@ void setupWiFi() {
 }
 
 // ===================================
+// Handler dla stron HTML
+// ===================================
+void handleRoot(AsyncWebServerRequest *request) {
+  request->send_P(200, "text/html", index_html);
+}
+
+void handleSettings(AsyncWebServerRequest *request) {
+  request->send_P(200, "text/html", settings_html);
+}
+
+void handleCurve(AsyncWebServerRequest *request) {
+  request->send_P(200, "text/html", curve_html);
+}
+
+// ===================================
 // Konfiguracja serwera WWW i endpointów API
 // ===================================
 void setupWebServer() {
-  // Inicjalizacja SPIFFS (system plików dla WebUI)
-  if (!SPIFFS.begin(true)) {
-    Serial.println("[WebServer] Błąd montowania SPIFFS!");
-    return;
-  }
-  Serial.println("[WebServer] SPIFFS zamontowany");
+  // Routing HTML stron (wbudowanych w kod)
+  server.on("/", HTTP_GET, handleRoot);
+  server.on("/index.html", HTTP_GET, handleRoot);
+  server.on("/settings.html", HTTP_GET, handleSettings);
+  server.on("/curve.html", HTTP_GET, handleCurve);
   
-  // Serwowanie plików statycznych z SPIFFS
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+  Serial.println("[WebServer] Strony HTML wbudowane w kod (bez SPIFFS)");
   
   // ===================================
   // API Endpoint: GET /api/status
@@ -88,7 +690,7 @@ void setupWebServer() {
     
     doc["tempCO"] = tempCO;
     doc["tempEXT"] = tempEXT;
-    doc["tempTarget"] = targetTemp;
+    doc["targetTemp"] = targetTemp;  // Poprawiona nazwa z tempTarget -> targetTemp
     doc["actuatorPos"] = actuatorPos;
     doc["thermostatActive"] = config.thermostatActive;
     doc["modbusConnected"] = modbusConnected;
@@ -187,24 +789,33 @@ void setupWebServer() {
       DeserializationError error = deserializeJson(doc, data, len);
       
       if (error) {
-        request->send(400, "text/plain", "Błąd parsowania JSON");
+        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Błąd parsowania JSON\"}");
         return;
       }
       
-      // Aktualizacja WiFi
+      // Aktualizacja WiFi (obsługa zarówno wifiSSID jak i wifiPass)
       if (doc.containsKey("wifiSSID")) {
         strlcpy(config.wifiSSID, doc["wifiSSID"], sizeof(config.wifiSSID));
       }
       if (doc.containsKey("wifiPassword")) {
         strlcpy(config.wifiPassword, doc["wifiPassword"], sizeof(config.wifiPassword));
       }
+      if (doc.containsKey("wifiPass")) {
+        strlcpy(config.wifiPassword, doc["wifiPass"], sizeof(config.wifiPassword));
+      }
       
-      // Aktualizacja Modbus
+      // Aktualizacja Modbus (obsługa zarówno modbusUnitID jak i modbusID)
       if (doc.containsKey("modbusUnitID")) {
         config.modbusUnitID = doc["modbusUnitID"];
       }
+      if (doc.containsKey("modbusID")) {
+        config.modbusUnitID = doc["modbusID"];
+      }
       if (doc.containsKey("modbusBaudrate")) {
         config.modbusBaudrate = doc["modbusBaudrate"];
+      }
+      if (doc.containsKey("modbusBaud")) {
+        config.modbusBaudrate = doc["modbusBaud"];
       }
       
       // Aktualizacja histerezy
@@ -212,9 +823,23 @@ void setupWebServer() {
         config.hysteresis = doc["hysteresis"];
       }
       
+      // Aktualizacja statusu termostatu (obsługa thermoActive)
+      if (doc.containsKey("thermostatActive")) {
+        config.thermostatActive = doc["thermostatActive"];
+      }
+      if (doc.containsKey("thermoActive")) {
+        config.thermostatActive = doc["thermoActive"];
+      }
+      
       saveConfig();
       Serial.println("[WebServer] Ustawienia zaktualizowane");
-      request->send(200, "text/plain", "OK - restart wymagany dla WiFi/Modbus");
+      request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Zapisano - restart za 3s\"}");
+      
+      // Restart po 3 sekundach (jeśli zmieniono WiFi)
+      if (doc.containsKey("wifiSSID") || doc.containsKey("wifiPassword") || doc.containsKey("wifiPass")) {
+        delay(3000);
+        ESP.restart();
+      }
     }
   );
   
