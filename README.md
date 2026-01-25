@@ -180,7 +180,6 @@ ES32C14 (IO1, IO3, IO22) → Wbudowany RS485 → A/B → PLC Modbus
   - Preferences (wbudowana)
   - WiFi (wbudowana)
   - ESPmDNS (wbudowana)
-  - SPIFFS (wbudowana)
 
 ---
 
@@ -236,7 +235,7 @@ Alternatywnie: Pobierz ZIP z GitHub → **Code → Download ZIP**
    - **Upload Speed:** 921600
    - **CPU Frequency:** 160MHz
    - **Flash Size:** 4MB (32Mb)
-   - **Partition Scheme:** Default 4MB with spiffs (1.2MB APP/1.5MB SPIFFS)
+   - **Partition Scheme:** Default 4MB (bez SPIFFS)
    - **Core Debug Level:** None (dla release) lub Info (dla debugowania)
 
 ### Krok 6: Upload kodu
@@ -244,29 +243,9 @@ Alternatywnie: Pobierz ZIP z GitHub → **Code → Download ZIP**
 2. Wybierz odpowiedni port: **Tools → Port → COMX** (Windows) lub **/dev/ttyUSBX** (Linux)
 3. Kliknij **Upload** (Ctrl+U)
 4. Poczekaj na zakończenie (ok. 30-60 sekund)
+5. **Gotowe!** WebUI jest wbudowane w kod - nie potrzebujesz uploadować plików SPIFFS
 
-### Krok 7: Upload plików WebUI do SPIFFS
-**Metoda 1: Użyj ESP32 Sketch Data Upload (zalecane)**
-
-1. Zainstaluj plugin:
-   - Pobierz [ESP32FS](https://github.com/me-no-dev/arduino-esp32fs-plugin/releases)
-   - Wypakuj do `~/Arduino/tools/ESP32FS/tool/`
-   - Zrestartuj Arduino IDE
-
-2. Upewnij się, że folder `data/` znajduje się w katalogu sketcha
-3. Wybierz **Tools → ESP32 Sketch Data Upload**
-4. Poczekaj na zakończenie uploadu
-
-**Metoda 2: Użyj narzędzia esptool.py (alternatywna)**
-```bash
-# Generuj obraz SPIFFS
-mkspiffs -c data -p 256 -b 4096 -s 1572864 spiffs.bin
-
-# Upload do ESP32
-esptool.py --chip esp32c3 --port /dev/ttyUSB0 --baud 921600 write_flash 0x290000 spiffs.bin
-```
-
-### Krok 8: Podłączenie hardware
+### Krok 7: Podłączenie hardware
 Połącz ESP32 z modułem RS485 zgodnie ze schematem w [wiring_diagram.md](wiring_diagram.md)
 
 ---
@@ -560,11 +539,11 @@ GND                     → GND
 **Problem:** Strona nie wyświetla się lub zwraca błąd 404
 
 **Rozwiązanie:**
-1. Upewnij się, że pliki WebUI zostały wgrane do SPIFFS (ESP32 Sketch Data Upload)
-2. Sprawdź partycjonowanie Flash (musi zawierać SPIFFS)
-3. Spróbuj ponownie wgrać pliki SPIFFS
-4. Sprawdź Serial Monitor dla błędów montowania SPIFFS
-5. Spróbuj użyć adresu IP zamiast mDNS
+1. Upewnij się, że wgrałeś najnowszą wersję kodu (WebUI jest wbudowane w kod od wersji 1.1+)
+2. Sprawdź Serial Monitor - powinno być "Strony HTML wbudowane w kod (bez SPIFFS)"
+3. Spróbuj użyć adresu IP zamiast mDNS
+4. Wyczyść cache przeglądarki (Ctrl+F5)
+5. Jeśli używasz starszej wersji kodu, zaktualizuj do najnowszej
 
 ### Termostat nie działa
 
