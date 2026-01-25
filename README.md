@@ -133,7 +133,7 @@ Projekt został zaprojektowany dla płytki **ElecTechSup ES32C14** (ESP32-C3) z 
 
 ### 📷 Dokumentacja płytki:
 
-![ES32C14 Board](docs/images/es32c14-interfaces.jpg)
+![ES32C14 Board](docs/images/es32c14-interfaces.avif)
 
 **Pełna specyfikacja:** Zobacz [docs/ES32C14_HARDWARE.md](docs/ES32C14_HARDWARE.md)
 
@@ -156,7 +156,7 @@ ES32C14 (IO1, IO3, IO22) → Wbudowany RS485 → A/B → PLC Modbus
                                         Rezystor 120Ω (opcjonalny)
 ```
 
-![Wiring Diagram](docs/images/es32c14-wiring.jpg)
+![Wiring Diagram](docs/images/es32c14-wiring.avif)
 
 ---
 

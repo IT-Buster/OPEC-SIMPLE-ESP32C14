@@ -125,16 +125,16 @@ Płytka posiada wbudowany zasilacz AC/DC umożliwiający zasilanie bezpośrednio
 ## 📷 Zdjęcia i diagramy
 
 ### Pinout płytki
-![ES32C14 Pinout](images/es32c14-pinout.jpg)
+![ES32C14 Pinout](images/es32c14-pinout.avif)
 
 ### Opis interfejsów
-![ES32C14 Interfaces](images/es32c14-interfaces.jpg)
+![ES32C14 Interfaces](images/es32c14-interfaces.avif)
 
 ### Wiring Diagram
-![ES32C14 Wiring](images/es32c14-wiring.jpg)
+![ES32C14 Wiring](images/es32c14-wiring.avif)
 
 ### Konfiguracja DIP Switch
-![ES32C14 DIP Switch](images/es32c14-dip-switch.jpg)
+![ES32C14 DIP Switch](images/es32c14-dip-switch.avif)
 
 ---
 

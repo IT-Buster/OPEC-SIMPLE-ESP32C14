@@ -125,16 +125,16 @@ The board has a built-in AC/DC power supply allowing direct connection to 230V A
 ## 📷 Photos and Diagrams
 
 ### Board Pinout
-![ES32C14 Pinout](images/es32c14-pinout.jpg)
+![ES32C14 Pinout](images/es32c14-pinout.avif)
 
 ### Interface Description
-![ES32C14 Interfaces](images/es32c14-interfaces.jpg)
+![ES32C14 Interfaces](images/es32c14-interfaces.avif)
 
 ### Wiring Diagram
-![ES32C14 Wiring](images/es32c14-wiring.jpg)
+![ES32C14 Wiring](images/es32c14-wiring.avif)
 
 ### DIP Switch Configuration
-![ES32C14 DIP Switch](images/es32c14-dip-switch.jpg)
+![ES32C14 DIP Switch](images/es32c14-dip-switch.avif)
 
 ---
 
