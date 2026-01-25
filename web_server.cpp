@@ -15,6 +15,9 @@ AsyncWebServer server(80);
 // ===================================
 // HTML wbudowany jako PROGMEM
 // ===================================
+
+// Dashboard - Główna strona z wyświetlaniem danych w czasie rzeczywistym
+// Odświeżanie co 2 sekundy, pokazuje temperatury, status Modbus, siłownik
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="pl">
@@ -229,6 +232,8 @@ const char index_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+// Ustawienia - Strona konfiguracji WiFi, Modbus i termostatu
+// Formularz z zapisem do Preferences i opcjonalnym restartem
 const char settings_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="pl">
@@ -441,6 +446,8 @@ const char settings_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+// Krzywa grzewcza - Edycja 9 punktów krzywej temperaturowej
+// Tabela z polami input, zapisuje do Preferences
 const char curve_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="pl">
@@ -789,19 +796,29 @@ void setupWebServer() {
       DeserializationError error = deserializeJson(doc, data, len);
       
       if (error) {
-        request->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Błąd parsowania JSON\"}");
+        StaticJsonDocument<128> resp;
+        resp["status"] = "error";
+        resp["message"] = "Błąd parsowania JSON";
+        String response;
+        serializeJson(resp, response);
+        request->send(400, "application/json", response);
         return;
       }
+      
+      bool wifiChanged = false;
       
       // Aktualizacja WiFi (obsługa zarówno wifiSSID jak i wifiPass)
       if (doc.containsKey("wifiSSID")) {
         strlcpy(config.wifiSSID, doc["wifiSSID"], sizeof(config.wifiSSID));
+        wifiChanged = true;
       }
       if (doc.containsKey("wifiPassword")) {
         strlcpy(config.wifiPassword, doc["wifiPassword"], sizeof(config.wifiPassword));
+        wifiChanged = true;
       }
       if (doc.containsKey("wifiPass")) {
         strlcpy(config.wifiPassword, doc["wifiPass"], sizeof(config.wifiPassword));
+        wifiChanged = true;
       }
       
       // Aktualizacja Modbus (obsługa zarówno modbusUnitID jak i modbusID)
@@ -833,12 +850,25 @@ void setupWebServer() {
       
       saveConfig();
       Serial.println("[WebServer] Ustawienia zaktualizowane");
-      request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Zapisano - restart za 3s\"}");
       
-      // Restart po 3 sekundach (jeśli zmieniono WiFi)
-      if (doc.containsKey("wifiSSID") || doc.containsKey("wifiPassword") || doc.containsKey("wifiPass")) {
-        delay(3000);
-        ESP.restart();
+      StaticJsonDocument<128> resp;
+      resp["status"] = "ok";
+      resp["message"] = wifiChanged ? "Zapisano - restart za 3s" : "Zapisano";
+      String response;
+      serializeJson(resp, response);
+      request->send(200, "application/json", response);
+      
+      // Restart po 3 sekundach (jeśli zmieniono WiFi) - używamy Task zamiast delay
+      if (wifiChanged) {
+        static bool restartScheduled = false;
+        if (!restartScheduled) {
+          restartScheduled = true;
+          // Zaplanuj restart w osobnym zadaniu
+          xTaskCreate([](void* param) {
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+            ESP.restart();
+          }, "restart_task", 2048, NULL, 1, NULL);
+        }
       }
     }
   );
