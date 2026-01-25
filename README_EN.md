@@ -119,13 +119,54 @@
 
 ---
 
+## 🔧 Hardware Specification
+
+The project is designed for **ElecTechSup ES32C14** board (ESP32-C3) with built-in industrial interfaces:
+
+### Key Board Features:
+- ✅ **ESP32-C3** (RISC-V, WiFi, Bluetooth 5.0)
+- ✅ **RS485 Modbus RTU** (IO1, IO3, IO22)
+- ✅ **4x 10A Relays** (pump, valve control)
+- ✅ **4x NPN Digital Inputs** (buttons, sensors)
+- ✅ **Analog I/O** (0-10V, 0-20mA)
+- ✅ Power supply **12V/24V DC** or **AC 85-265V**
+
+### 📷 Board Documentation:
+
+![ES32C14 Board](docs/images/es32c14-interfaces.jpg)
+
+**Full specification:** See [docs/ES32C14_HARDWARE_EN.md](docs/ES32C14_HARDWARE_EN.md)
+
+**Wersja polska:** Zobacz [docs/ES32C14_HARDWARE.md](docs/ES32C14_HARDWARE.md)
+
+---
+
+### RS485 Pin Mapping (Modbus RTU):
+
+| RS485 Function | ESP32 GPIO | ES32C14 Port |
+|----------------|------------|--------------|
+| TX (DI)        | GPIO 1     | IO1          |
+| RX (RO)        | GPIO 3     | IO3          |
+| DE/RE          | GPIO 22    | IO22         |
+
+**Wiring Diagram:**
+```
+ES32C14 (IO1, IO3, IO22) → Built-in RS485 → A/B → PLC Modbus
+                                               ↓
+                                       120Ω Resistor (optional)
+```
+
+![Wiring Diagram](docs/images/es32c14-wiring.jpg)
+
+---
+
 ## 📋 Requirements
 
 ### Hardware
 - **Microcontroller:** ElecTechSup ES32C14 (ESP32-C3) or compatible
-- **RS485 Converter:** MAX485, SP485 module, or similar
+- **RS485 Interface:** Built-in on ES32C14 board
 - **Modbus PLC:** Device with Modbus RTU interface
-- **Power Supply:** 5V via USB or external (min. 500mA)
+- **Power Supply:** 12V/24V DC or AC 85-265V
 - **Cables:** Shielded twisted pair for RS485
 
 ### Software
@@ -464,33 +505,23 @@ Detailed wiring diagram is available in [wiring_diagram.md](wiring_diagram.md).
 
 | GPIO Pin | Function | Description             |
 |----------|----------|-------------------------|
-| GPIO 21  | TX       | UART TX (RS485 DI)      |
-| GPIO 20  | RX       | UART RX (RS485 RO)      |
-| GPIO 19  | DE/RE    | Direction Enable RS485  |
-| 5V       | VCC      | Power Supply            |
+| GPIO 1   | TX       | UART TX (RS485 DI)      |
+| GPIO 3   | RX       | UART RX (RS485 RO)      |
+| GPIO 22  | DE/RE    | Direction Enable RS485  |
+| 12-24V   | VCC      | Power Supply            |
 | GND      | GND      | Ground                  |
-
-### Connection to RS485 Module
-
-```
-ESP32-C3 → RS485 Module
-GPIO 21  → DI (Transmit)
-GPIO 20  → RO (Receive)
-GPIO 19  → DE + RE (Direction)
-5V       → VCC
-GND      → GND
-```
 
 ### Connection to Modbus PLC
 
 ```
-RS485 Module → PLC
-A (+)        → A
-B (-)        → B
-GND          → GND
+ES32C14 Built-in RS485 → PLC
+A (+)                   → A
+B (-)                   → B
+GND                     → GND
 ```
 
 **⚠️ Important:**
+- ES32C14 has **built-in RS485 converter** - no external MAX485 module needed
 - Add 120Ω terminating resistor between A and B if ESP32 is at the end of the line
 - Use shielded twisted pair for noise immunity
 - Make sure all devices share common ground (GND)
