@@ -17,5 +17,7 @@ extern bool modbusConnected;  // Status połączenia Modbus
 void setupModbus();
 bool readModbusData();
 bool writeActuatorPosition(uint16_t position);
+void preTransmission();   // Callback przed transmisją
+void postTransmission();  // Callback po transmisji
 
 #endif // MODBUS_HANDLER_H

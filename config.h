@@ -6,31 +6,31 @@
 // ============================================
 // PINY RS485 DLA PŁYTKI ES32C14
 // ============================================
-// Zgodnie z dokumentacją ElecTechSup ES32C14:
-// - RS485 Port używa GPIO: 1, 3, 22
-// - IO1 (GPIO1)  → RS485 DI (Transmit)
-// - IO3 (GPIO3)  → RS485 RO (Receive) 
+// Zgodnie z przykładem producenta ElecTechSup:
+// http://www.485io.com
+// 
+// ES32C14 ma WBUDOWANY moduł RS485 podłączony do:
+// - IO1 (GPIO1)  → RS485 TX (Data Input)
+// - IO3 (GPIO3)  → RS485 RX (Receive Output) 
 // - IO22 (GPIO22)→ RS485 DE/RE (Direction Enable)
+//
+// ⚠️ UWAGA dla ESP32-D0WD (klasyczny ESP32):
+// GPIO 1 i 3 to UART0 (Serial), te same piny co USB Serial!
+// Podczas komunikacji Modbus Serial Monitor nie będzie działał.
+// Używaj WebUI do monitorowania statusu.
 
-#define RS485_TX_PIN     1   // IO1 → DI (Data Input do RS485)
-#define RS485_RX_PIN     3   // IO3 → RO (Receive Output z RS485)
+#define RS485_TX_PIN     1   // IO1 → TX (Serial/UART0)
+#define RS485_RX_PIN     3   // IO3 → RX (Serial/UART0)
 #define RS485_DE_RE_PIN  22  // IO22 → DE+RE (Direction Enable)
-#define SERIAL_MODBUS   Serial0   // UART0 (GPIO 1, 3)
 
-// UWAGA: ESP32-C3 ma ograniczenia pinów UART
-// GPIO 1, 3 mogą wymagać użycia Serial0 lub konfiguracji niestandardowej
-// Sprawdź czy nie kolidują z USB Serial (używany do debugowania)
-// Alternatywnie rozważ użycie innych pinów z Free Port:
-// IO33, IO32, IO15, IO2, IO0, IO4, IO16, IO21, IO23
-
-// ===================================
-// Parametry Modbus
-// ===================================
+// ============================================
+// KONFIGURACJA MODBUS
+// ============================================
 #define MODBUS_BAUDRATE      115200
-#define MODBUS_UNIT_ID       2
-#define MODBUS_TIMEOUT       1000  // ms
+#define MODBUS_UNIT_ID       2       // Domyślny Slave ID (musi być zgodny z konfiguracją PLC!)
+#define MODBUS_TIMEOUT       1000    // ms
 #define MODBUS_RETRY_COUNT   3
-#define MODBUS_READ_INTERVAL 15000 // ms (15 sekund)
+#define MODBUS_READ_INTERVAL 15000   // ms (15 sekund)
 
 // ===================================
 // Parametry WiFi AP (Access Point)

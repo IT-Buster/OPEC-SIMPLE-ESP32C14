@@ -19,28 +19,40 @@ uint16_t actuatorPos = 0;
 // Inicjalizacja Modbus RTU
 // ===================================
 void setupModbus() {
-  // Konfiguracja portu szeregowego UART1 dla Modbus
-  SERIAL_MODBUS.begin(config.modbusBaudrate, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
+  // ES32C14 używa Serial (UART0) dla RS485
+  // Zgodnie z dokumentacją producenta ElecTechSup
+  Serial.begin(config.modbusBaudrate, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
   
-  // Konfiguracja pinu DE/RE (sterowanie kierunkiem transmisji)
+  // Konfiguracja pinu DE/RE (GPIO 22)
   pinMode(RS485_DE_RE_PIN, OUTPUT);
-  digitalWrite(RS485_DE_RE_PIN, LOW); // Tryb odbioru domyślnie
-  
-  // Inicjalizacja biblioteki ModbusMaster
-  modbus.begin(config.modbusUnitID, SERIAL_MODBUS);
-  
-  // Callback dla przełączania trybu nadawania/odbioru
-  modbus.preTransmission([]() {
-    digitalWrite(RS485_DE_RE_PIN, HIGH); // Przełącz na nadawanie
-  });
-  
-  modbus.postTransmission([]() {
-    digitalWrite(RS485_DE_RE_PIN, LOW);  // Przełącz na odbiór
-  });
+  digitalWrite(RS485_DE_RE_PIN, LOW); // Tryb RX (odbiór)
   
   Serial.println("[Modbus] Inicjalizacja zakończona");
   Serial.printf("[Modbus] Baudrate: %d, Unit ID: %d\n", 
                 config.modbusBaudrate, config.modbusUnitID);
+  Serial.printf("[Modbus] TX: GPIO%d, RX: GPIO%d, DE/RE: GPIO%d\n", 
+                RS485_TX_PIN, RS485_RX_PIN, RS485_DE_RE_PIN);
+  
+  // Inicjalizacja biblioteki ModbusMaster
+  modbus.begin(config.modbusUnitID, Serial);
+  
+  // Callback dla przełączania TX/RX
+  modbus.preTransmission(preTransmission);
+  modbus.postTransmission(postTransmission);
+}
+
+// ===================================
+// Callback przed transmisją - przełącz na tryb TX
+// ===================================
+void preTransmission() {
+  digitalWrite(RS485_DE_RE_PIN, HIGH); // DE/RE = HIGH → nadawanie
+}
+
+// ===================================
+// Callback po transmisji - przełącz na tryb RX
+// ===================================
+void postTransmission() {
+  digitalWrite(RS485_DE_RE_PIN, LOW);  // DE/RE = LOW → odbiór
 }
 
 // ===================================
