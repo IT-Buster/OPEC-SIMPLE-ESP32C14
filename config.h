@@ -27,7 +27,7 @@
 // KONFIGURACJA MODBUS
 // ============================================
 #define MODBUS_BAUDRATE      115200
-#define MODBUS_UNIT_ID       2       // Domyślny Slave ID (programowalny w PLC)
+#define MODBUS_UNIT_ID       2       // Domyślny Slave ID (musi być zgodny z konfiguracją PLC!)
 #define MODBUS_TIMEOUT       1000    // ms
 #define MODBUS_RETRY_COUNT   3
 #define MODBUS_READ_INTERVAL 15000   // ms (15 sekund)
