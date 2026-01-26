@@ -10,7 +10,7 @@
  * - WiFi (tryb AP i STA)
  * - Zapis konfiguracji w pamięci Flash
  * 
- * Hardware: ElecTechSup ES32C14 (ESP32-C3)
+ * Hardware: EleTechSup ES32C14 (ESP32-C3)
  * 
  * Autor: IT-Buster
  * Licencja: MIT

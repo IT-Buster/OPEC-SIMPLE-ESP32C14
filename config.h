@@ -6,7 +6,7 @@
 // ============================================
 // PINY RS485 DLA PŁYTKI ES32C14
 // ============================================
-// Zgodnie z przykładem producenta ElecTechSup:
+// Zgodnie z przykładem producenta EleTechSup:
 // http://www.485io.com
 // 
 // ES32C14 ma WBUDOWANY moduł RS485 podłączony do:

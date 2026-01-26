@@ -6,7 +6,7 @@
 [![Arduino](https://img.shields.io/badge/Arduino-IDE-00979D?logo=arduino)](https://www.arduino.cc/)
 [![ESP32](https://img.shields.io/badge/ESP32-C3-E7352C?logo=espressif)](https://www.espressif.com/)
 
-> Arduino project for **ElecTechSup ES32C14 (ESP32-C3)** board to control heating systems via Modbus RTU RS485. Conversion of the [OPEC-SIMPLE](https://github.com/IT-Buster/OPEC-SIMPLE) project (Node-RED) to native C++ code.
+> Arduino project for **EleTechSup ES32C14 (ESP32-C3)** board to control heating systems via Modbus RTU RS485. Conversion of the [OPEC-SIMPLE](https://github.com/IT-Buster/OPEC-SIMPLE) project (Node-RED) to native C++ code.
 
 [🇵🇱 Wersja polska](README.md)
 
@@ -121,7 +121,7 @@
 
 ## 🔧 Hardware Specification
 
-The project is designed for **ElecTechSup ES32C14** board (ESP32-C3) with built-in industrial interfaces:
+The project is designed for **EleTechSup ES32C14** board (ESP32-C3) with built-in industrial interfaces:
 
 ### Key Board Features:
 - ✅ **ESP32-C3** (RISC-V, WiFi, Bluetooth 5.0)
@@ -163,7 +163,7 @@ ES32C14 (IO1, IO3, IO22) → Built-in RS485 → A/B → PLC Modbus
 ## 📋 Requirements
 
 ### Hardware
-- **Microcontroller:** ElecTechSup ES32C14 (ESP32-C3) or compatible
+- **Microcontroller:** EleTechSup ES32C14 (ESP32-C3) or compatible
 - **RS485 Interface:** Built-in on ES32C14 board
 - **Modbus PLC:** Device with Modbus RTU interface
 - **Power Supply:** 12V/24V DC or AC 85-265V

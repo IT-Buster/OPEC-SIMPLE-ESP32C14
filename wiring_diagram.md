@@ -1,7 +1,7 @@
 # 🔌 Schemat połączeń - OPEC-SIMPLE-ESP32C14
 
 ## ⚡ Hardware
-- **Mikrokontroler:** ElecTechSup ES32C14 (ESP32-C3)
+- **Mikrokontroler:** EleTechSup ES32C14 (ESP32-C3)
 - **Interface RS485:** Wbudowany w płytkę ES32C14
 - **Zasilanie:** 12V/24V DC lub AC 85-265V
 
@@ -29,7 +29,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│       ElecTechSup ES32C14 Board                    │
+│       EleTechSup ES32C14 Board                    │
 │  ┌──────────────────────────────────────────────┐  │
 │  │  ESP32-C3 + RS485 Interface                  │  │
 │  │                                               │  │

@@ -2,7 +2,7 @@
 
 ⚠️ **IMPORTANT:** The image files in this directory are currently **placeholder files** and need to be replaced with actual board documentation images.
 
-This directory should contain the following images from the ElecTechSup ES32C14 board documentation:
+This directory should contain the following images from the EleTechSup ES32C14 board documentation:
 
 1. **es32c14-pinout.avif** - Board pinout diagram showing pin mapping and onboard resources
 2. **es32c14-interfaces.avif** - Interface descriptions (Power, RS485, Analog I/O, Digital I/O, Relays)
@@ -13,7 +13,7 @@ This directory should contain the following images from the ElecTechSup ES32C14 
 
 To complete the documentation, please add the actual board images:
 
-1. Obtain the official ES32C14 board documentation from ElecTechSup or the manufacturer
+1. Obtain the official ES32C14 board documentation from EleTechSup or the manufacturer
 2. Replace the placeholder .avif files with the actual board photos/diagrams
 3. Ensure the images are properly sized and readable
 4. Commit and push the updated images
