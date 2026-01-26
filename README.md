@@ -6,7 +6,7 @@
 [![Arduino](https://img.shields.io/badge/Arduino-IDE-00979D?logo=arduino)](https://www.arduino.cc/)
 [![ESP32](https://img.shields.io/badge/ESP32-C3-E7352C?logo=espressif)](https://www.espressif.com/)
 
-> Projekt Arduino dla płytki **ElecTechSup ES32C14 (ESP32-C3)** do sterowania systemem grzewczym przez Modbus RTU RS485. Konwersja projektu [OPEC-SIMPLE](https://github.com/IT-Buster/OPEC-SIMPLE) (Node-RED) na natywny kod C++.
+> Projekt Arduino dla płytki **EletechSup ES32C14 (ESP32-C3)** do sterowania systemem grzewczym przez Modbus RTU RS485. Konwersja projektu [OPEC-SIMPLE](https://github.com/IT-Buster/OPEC-SIMPLE) (Node-RED) na natywny kod C++.
 
 [🇬🇧 English version](README_EN.md)
 
@@ -121,7 +121,7 @@
 
 ## 🔧 Specyfikacja Hardware
 
-Projekt został zaprojektowany dla płytki **ElecTechSup ES32C14** (ESP32-C3) z wbudowanymi interfejsami:
+Projekt został zaprojektowany dla płytki **EletechSup ES32C14** (ESP32-C3) z wbudowanymi interfejsami:
 
 ### Kluczowe cechy płytki:
 - ✅ **ESP32-C3** (RISC-V, WiFi, Bluetooth 5.0)
@@ -185,7 +185,7 @@ GND                → GND
 ## 📋 Wymagania
 
 ### Hardware
-- **Mikrokontroler:** ElecTechSup ES32C14 (ESP32-C3) lub kompatybilny
+- **Mikrokontroler:** EletechSup ES32C14 (ESP32-C3) lub kompatybilny
 - **Interface RS485:** Wbudowany w płytkę ES32C14
 - **PLC Modbus:** Urządzenie z interfejsem Modbus RTU
 - **Zasilanie:** 12V/24V DC lub AC 85-265V
