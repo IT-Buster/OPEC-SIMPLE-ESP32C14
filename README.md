@@ -158,6 +158,28 @@ ES32C14 (IO1, IO3, IO22) → Wbudowany RS485 → A/B → PLC Modbus
 
 ![Wiring Diagram](docs/images/es32c14-wiring.avif)
 
+### ⚠️ Important Note for ESP32-D0WD variant
+
+If your ES32C14 board has **ESP32-D0WD-V3** chip (instead of ESP32-C3):
+
+- RS485 uses **Serial (UART0)** on GPIO 1, 3, 22
+- **Serial Monitor will NOT work** during Modbus communication (shared pins with USB)
+- Use **WebUI Dashboard** (`http://opec-esp32.local`) to monitor system status
+- Debugging: Use Serial1 (GPIO 9 TX, GPIO 10 RX) with external USB-Serial adapter
+
+**Wiring:**
+```
+ES32C14 RS485 Port → PLC Modbus
+A (+)              → A
+B (-)              → B  
+GND                → GND
+```
+
+**PLC Configuration:**
+- Slave ID: 2 (default, configurable in PLC)
+- Baudrate: 115200
+- Parity: None (8N1)
+
 ---
 
 ## 📋 Wymagania
