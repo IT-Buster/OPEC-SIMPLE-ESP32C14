@@ -1,8 +1,8 @@
-# 🔧 Specyfikacja Hardware - ElecTechSup ES32C14
+# 🔧 Specyfikacja Hardware - EletechSup ES32C14
 
 ## Przegląd płytki
 
-ElecTechSup ES32C14 to rozbudowana płyta rozwojowa oparta na **ESP32-C3** z wbudowanymi interfejsami przemysłowymi:
+EletechSup ES32C14 to rozbudowana płyta rozwojowa oparta na **ESP32-C3** z wbudowanymi interfejsami przemysłowymi:
 
 - ✅ **RS485** (Modbus RTU)
 - ✅ **4x Relay 10A** (sterowanie obciążeniami AC/DC)
@@ -156,7 +156,7 @@ Płytka posiada wbudowany zasilacz AC/DC umożliwiający zasilanie bezpośrednio
 
 ## 🔗 Linki
 
-- **Dokumentacja producenta:** [ElecTechSup ES32C14](https://www.electechsup.com/)
+- **Dokumentacja producenta:** [EletechSup ES32C14](https://www.electechsup.com/)
 - **Datasheet ESP32-C3:** [Espressif ESP32-C3 Datasheet](https://www.espressif.com/en/products/socs/esp32-c3)
 - **Kod Arduino:** [OPEC-SIMPLE-ESP32C14](https://github.com/IT-Buster/OPEC-SIMPLE-ESP32C14)
 

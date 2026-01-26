@@ -1,8 +1,8 @@
-# 🔧 Hardware Specification - ElecTechSup ES32C14
+# 🔧 Hardware Specification - EletechSup ES32C14
 
 ## Board Overview
 
-ElecTechSup ES32C14 is an advanced development board based on **ESP32-C3** with built-in industrial interfaces:
+EletechSup ES32C14 is an advanced development board based on **ESP32-C3** with built-in industrial interfaces:
 
 - ✅ **RS485** (Modbus RTU)
 - ✅ **4x 10A Relays** (AC/DC load control)
@@ -156,7 +156,7 @@ The board has a built-in AC/DC power supply allowing direct connection to 230V A
 
 ## 🔗 Links
 
-- **Manufacturer Documentation:** [ElecTechSup ES32C14](https://www.electechsup.com/)
+- **Manufacturer Documentation:** [EletechSup ES32C14](https://www.electechsup.com/)
 - **ESP32-C3 Datasheet:** [Espressif ESP32-C3 Product Page](https://www.espressif.com/en/products/socs/esp32-c3)
 - **Arduino Code:** [OPEC-SIMPLE-ESP32C14](https://github.com/IT-Buster/OPEC-SIMPLE-ESP32C14)
 

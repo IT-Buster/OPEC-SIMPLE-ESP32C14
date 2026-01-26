@@ -20,7 +20,7 @@ uint16_t actuatorPos = 0;
 // ===================================
 void setupModbus() {
   // ES32C14 używa Serial (UART0) dla RS485
-  // Zgodnie z dokumentacją producenta ElecTechSup
+  // Zgodnie z dokumentacją producenta EletechSup
   Serial.begin(config.modbusBaudrate, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
   
   // Konfiguracja pinu DE/RE (GPIO 22)
