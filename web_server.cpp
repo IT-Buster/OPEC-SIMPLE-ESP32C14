@@ -1062,7 +1062,7 @@ void handleDiagnostics(AsyncWebServerRequest *request) {
 }
 
 void handleVersion(AsyncWebServerRequest *request) {
-  StaticJsonDocument<128> doc;
+  StaticJsonDocument<256> doc;
   doc["version"] = FIRMWARE_VERSION;
   doc["buildDate"] = BUILD_DATE;
   doc["buildTime"] = BUILD_TIME;
