@@ -1271,6 +1271,11 @@ void setupWebServer() {
         config.thermostatActive = doc["thermoActive"];
       }
       
+      // Aktualizacja trybu Modbus (Input Registers vs Holding Registers)
+      if (doc.containsKey("modbusUseInputRegisters")) {
+        config.modbusUseInputRegisters = doc["modbusUseInputRegisters"];
+      }
+      
       saveConfig();
       Serial.println("[WebServer] Ustawienia zaktualizowane");
       
@@ -1307,6 +1312,7 @@ void setupWebServer() {
     // Nie wysyłamy hasła WiFi
     doc["modbusUnitID"] = config.modbusUnitID;
     doc["modbusBaudrate"] = config.modbusBaudrate;
+    doc["modbusUseInputRegisters"] = config.modbusUseInputRegisters;
     doc["hysteresis"] = config.hysteresis;
     doc["thermostatActive"] = config.thermostatActive;
     

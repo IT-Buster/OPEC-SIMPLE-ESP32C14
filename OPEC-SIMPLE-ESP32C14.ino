@@ -60,6 +60,7 @@ void loadConfig() {
     config.modbusBaudrate = preferences.getUInt("modbusBaudrate", MODBUS_BAUDRATE);
     config.hysteresis = preferences.getFloat("hysteresis", DEFAULT_HYSTERESIS);
     config.thermostatActive = preferences.getBool("thermostatActive", DEFAULT_THERMOSTAT_ACTIVE);
+    config.modbusUseInputRegisters = preferences.getBool("modbusUseInputReg", true); // Domyślnie true dla HT73
     
     // Wczytaj krzywą grzewczą
     for (int i = 0; i < HEATING_CURVE_POINTS; i++) {
@@ -94,6 +95,7 @@ void saveConfig() {
   preferences.putUInt("modbusBaudrate", config.modbusBaudrate);
   preferences.putFloat("hysteresis", config.hysteresis);
   preferences.putBool("thermostatActive", config.thermostatActive);
+  preferences.putBool("modbusUseInputReg", config.modbusUseInputRegisters);
   
   // Zapisz krzywą grzewczą
   for (int i = 0; i < HEATING_CURVE_POINTS; i++) {
@@ -119,6 +121,7 @@ void resetConfig() {
   config.modbusBaudrate = MODBUS_BAUDRATE;
   config.hysteresis = DEFAULT_HYSTERESIS;
   config.thermostatActive = DEFAULT_THERMOSTAT_ACTIVE;
+  config.modbusUseInputRegisters = true; // Domyślnie true dla HT73
   config.configInitialized = false;
   
   // Skopiuj domyślną krzywą grzewczą
