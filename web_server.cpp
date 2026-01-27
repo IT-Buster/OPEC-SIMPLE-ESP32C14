@@ -1022,7 +1022,7 @@ void setupWiFi() {
   // Sprawdź czy jest zapisana konfiguracja WiFi
   if (config.configInitialized && strlen(config.wifiSSID) > 0) {
     // Tryb STA - połącz z zapisaną siecią
-    Serial.printf("[WiFi] Łączenie z siecią: %s\n", config.wifiSSID);
+    // Serial zajęty przez RS485 - brak logów
     WiFi.mode(WIFI_STA);
     WiFi.begin(config.wifiSSID, config.wifiPassword);
     
@@ -1030,31 +1030,26 @@ void setupWiFi() {
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {
       delay(500);
-      Serial.print(".");
       attempts++;
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.println();
-      Serial.printf("[WiFi] Połączono! IP: %s\n", WiFi.localIP().toString().c_str());
-      Serial.printf("[WiFi] RSSI: %d dBm\n", WiFi.RSSI());
+      // Serial zajęty przez RS485 - brak logów
       return;
     } else {
-      Serial.println();
-      Serial.println("[WiFi] Nie udało się połączyć, uruchamiam tryb AP");
+      // Serial zajęty przez RS485 - brak logów
     }
   }
   
   // Tryb AP - utwórz własny punkt dostępu
   String apSSID = getAPSSID();
-  Serial.printf("[WiFi] Uruchamiam Access Point: %s\n", apSSID.c_str());
+  // Serial zajęty przez RS485 - brak logów
   
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
   WiFi.softAP(apSSID.c_str(), AP_PASSWORD);
   
-  Serial.printf("[WiFi] AP uruchomiony! IP: %s\n", WiFi.softAPIP().toString().c_str());
-  Serial.printf("[WiFi] Hasło: %s\n", AP_PASSWORD);
+  // Serial zajęty przez RS485 - brak logów
 }
 
 // ===================================
@@ -1099,7 +1094,7 @@ void setupWebServer() {
   server.on("/curve.html", HTTP_GET, handleCurve);
   server.on("/diagnostics.html", HTTP_GET, handleDiagnostics);
   
-  Serial.println("[WebServer] Strony HTML wbudowane w kod (bez SPIFFS)");
+  // Serial zajęty przez RS485 - brak logów
   
   // ===================================
   // API Endpoint: GET /api/version
@@ -1156,7 +1151,7 @@ void setupWebServer() {
           config.heatingCurve[i][1] = curve[i][1];
         }
         saveConfig();
-        Serial.println("[WebServer] Krzywa grzewcza zaktualizowana");
+        // Serial zajęty przez RS485 - brak logów
         request->send(200, "text/plain", "OK");
       } else {
         request->send(400, "text/plain", "Nieprawidłowa liczba punktów krzywej");
@@ -1200,8 +1195,7 @@ void setupWebServer() {
       if (doc.containsKey("active")) {
         config.thermostatActive = doc["active"];
         saveConfig();
-        Serial.printf("[WebServer] Termostat %s\n", 
-                      config.thermostatActive ? "WŁĄCZONY" : "WYŁĄCZONY");
+        // Serial zajęty przez RS485 - brak logów
         request->send(200, "text/plain", "OK");
       } else {
         request->send(400, "text/plain", "Brak parametru 'active'");
@@ -1277,7 +1271,7 @@ void setupWebServer() {
       }
       
       saveConfig();
-      Serial.println("[WebServer] Ustawienia zaktualizowane");
+      // Serial zajęty przez RS485 - brak logów
       
       StaticJsonDocument<128> resp;
       resp["status"] = "ok";
@@ -1333,7 +1327,12 @@ void setupWebServer() {
     doc["lastUpdate"] = millis();
     
     JsonArray registers = doc.createNestedArray("registers");
-    for (int i = 0; i < 6; i++) {
+    
+    // Dla HT73 (modbusUseInputRegisters=true): tylko 2 rejestry (0-1)
+    // Dla PLC (modbusUseInputRegisters=false): 6 rejestrów (0-5)
+    int registerCount = config.modbusUseInputRegisters ? 2 : 6;
+    
+    for (int i = 0; i < registerCount; i++) {
       JsonObject reg = registers.createNestedObject();
       reg["index"] = i;
       
@@ -1360,28 +1359,47 @@ void setupWebServer() {
       reg["float"] = int16Val / 10.0;
       
       // Opis - zależny od trybu konfiguracji
-      if (i == 0) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 0 (nieużywany w HT73)" : "Rejestr 0 (Pozycja siłownika PLC)";
-      } else if (i == 1) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 1 (nieużywany w HT73)" : "Rejestr 1 (PLC)";
-      } else if (i == 2) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 2 (Temperatura HT73 ×10)" : "Rejestr 2 (PLC)";
-      } else if (i == 3) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 3 (Wilgotność HT73 ×10)" : "Rejestr 3 (PLC)";
-      } else if (i == 4) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 4 (nieużywany w HT73)" : "Rejestr 4 (Temperatura zewnętrzna PLC ×10)";
-      } else if (i == 5) {
-        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 5 (nieużywany w HT73)" : "Rejestr 5 (Temperatura CO PLC ×10)";
+      if (config.modbusUseInputRegisters) {
+        // Tryb HT73 - rejestry 0-1
+        if (i == 0) {
+          reg["description"] = "Wilgotność × 10 (%)";
+        } else if (i == 1) {
+          reg["description"] = "Temperatura × 10 (°C)";
+        }
+      } else {
+        // Tryb PLC - rejestry 0-5
+        if (i == 0) {
+          reg["description"] = "Rejestr 0 (Pozycja siłownika PLC)";
+        } else if (i == 1) {
+          reg["description"] = "Rejestr 1 (PLC)";
+        } else if (i == 2) {
+          reg["description"] = "Rejestr 2 (PLC)";
+        } else if (i == 3) {
+          reg["description"] = "Rejestr 3 (PLC)";
+        } else if (i == 4) {
+          reg["description"] = "Rejestr 4 (Temperatura zewnętrzna PLC ×10)";
+        } else if (i == 5) {
+          reg["description"] = "Rejestr 5 (Temperatura CO PLC ×10)";
+        }
       }
     }
     
-    // Interpretacja temperatury z rejestru 2 (dla czujnika HT73/SHT35)
-    int16_t tempRaw = (int16_t)modbusRawRegisters[2];
-    doc["interpretedTemp"] = tempRaw / 10.0;
-    
-    // Wilgotność z rejestru 3 (jeśli dostępna)
-    int16_t humRaw = (int16_t)modbusRawRegisters[3];
-    doc["interpretedHumidity"] = humRaw / 10.0;
+    // Interpretacja danych
+    if (config.modbusUseInputRegisters) {
+      // HT73: Rejestr 0 = wilgotność, Rejestr 1 = temperatura
+      int16_t humRaw = (int16_t)modbusRawRegisters[0];
+      doc["interpretedHumidity"] = humRaw / 10.0;
+      
+      int16_t tempRaw = (int16_t)modbusRawRegisters[1];
+      doc["interpretedTemp"] = tempRaw / 10.0;
+    } else {
+      // PLC: Rejestr 4 = temp zewnętrzna, Rejestr 5 = temp CO
+      int16_t tempExtRaw = (int16_t)modbusRawRegisters[4];
+      doc["interpretedTemp"] = tempExtRaw / 10.0;
+      
+      int16_t tempCORaw = (int16_t)modbusRawRegisters[5];
+      doc["interpretedTempCO"] = tempCORaw / 10.0;
+    }
     
     String response;
     serializeJson(doc, response);
@@ -1393,7 +1411,7 @@ void setupWebServer() {
   // Reset ustawień do domyślnych
   // ===================================
   server.on("/api/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
-    Serial.println("[WebServer] Reset konfiguracji do domyślnych");
+    // Serial zajęty przez RS485 - brak logów
     resetConfig();
     request->send(200, "text/plain", "Resetowanie... Urządzenie zostanie zrestartowane");
     delay(1000);
@@ -1402,13 +1420,13 @@ void setupWebServer() {
   
   // Uruchomienie serwera
   server.begin();
-  Serial.println("[WebServer] Serwer HTTP uruchomiony na porcie 80");
+  // Serial zajęty przez RS485 - brak logów
   
   // Konfiguracja mDNS
   if (MDNS.begin(MDNS_HOSTNAME)) {
     MDNS.addService("http", "tcp", 80);
-    Serial.printf("[mDNS] Dostępny pod: http://%s.local\n", MDNS_HOSTNAME);
+    // Serial zajęty przez RS485 - brak logów
   } else {
-    Serial.println("[mDNS] Błąd inicjalizacji!");
+    // Serial zajęty przez RS485 - brak logów
   }
 }
