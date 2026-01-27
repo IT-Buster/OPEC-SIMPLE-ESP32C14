@@ -1359,19 +1359,19 @@ void setupWebServer() {
       // Float (divided by 10)
       reg["float"] = int16Val / 10.0;
       
-      // Opis
+      // Opis - zależny od trybu konfiguracji
       if (i == 0) {
-        reg["description"] = "Rejestr 0";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 0 (nieużywany w HT73)" : "Rejestr 0 (Pozycja siłownika PLC)";
       } else if (i == 1) {
-        reg["description"] = "Rejestr 1";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 1 (nieużywany w HT73)" : "Rejestr 1 (PLC)";
       } else if (i == 2) {
-        reg["description"] = "Rejestr 2 (Temp*10)";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 2 (Temperatura HT73 ×10)" : "Rejestr 2 (PLC)";
       } else if (i == 3) {
-        reg["description"] = "Rejestr 3";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 3 (Wilgotność HT73 ×10)" : "Rejestr 3 (PLC)";
       } else if (i == 4) {
-        reg["description"] = "Rejestr 4";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 4 (nieużywany w HT73)" : "Rejestr 4 (Temperatura zewnętrzna PLC ×10)";
       } else if (i == 5) {
-        reg["description"] = "Rejestr 5";
+        reg["description"] = config.modbusUseInputRegisters ? "Rejestr 5 (nieużywany w HT73)" : "Rejestr 5 (Temperatura CO PLC ×10)";
       }
     }
     

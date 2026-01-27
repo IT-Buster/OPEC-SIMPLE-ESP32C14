@@ -84,6 +84,11 @@ bool readModbusData() {
     if (result == modbus.ku8MBSuccess) {
       if (config.modbusUseInputRegisters) {
         // Pomyślnie odczytano dane z HT73
+        // Wyczyść tablicę przed zapisem nowych danych
+        for (int i = 0; i < 6; i++) {
+          modbusRawRegisters[i] = 0;
+        }
+        
         // Zapisz surowe wartości do tablicy (przesunięcie indeksów!)
         modbusRawRegisters[2] = modbus.getResponseBuffer(0); // Rejestr 2 czujnika → indeks 0 bufora
         modbusRawRegisters[3] = modbus.getResponseBuffer(1); // Rejestr 3 czujnika → indeks 1 bufora
@@ -97,6 +102,7 @@ bool readModbusData() {
         float humidityValue = humRaw / 10.0;
         
         // Dla kompatybilności z resztą systemu - zapisz temperaturę jako tempEXT
+        // tempEXT jest używany przez resztę systemu jako główna temperatura zewnętrzna
         tempEXT = temperature;
         humidity = humidityValue;
         
