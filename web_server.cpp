@@ -1116,6 +1116,7 @@ void setupWebServer() {
     
     doc["tempCO"] = tempCO;
     doc["tempEXT"] = tempEXT;
+    doc["humidity"] = humidity;  // Dodano wilgotność z czujnika HT73
     doc["targetTemp"] = targetTemp;  // Poprawiona nazwa z tempTarget -> targetTemp
     doc["actuatorPos"] = actuatorPos;
     doc["thermostatActive"] = config.thermostatActive;

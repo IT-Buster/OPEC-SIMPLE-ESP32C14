@@ -13,6 +13,7 @@ ModbusMaster modbus;
 bool modbusConnected = false;
 float tempCO = 0.0;
 float tempEXT = 0.0;
+float humidity = 0.0;
 uint16_t actuatorPos = 0;
 uint16_t modbusRawRegisters[6] = {0, 0, 0, 0, 0, 0};
 
@@ -57,11 +58,10 @@ void postTransmission() {
 }
 
 // ===================================
-// Odczyt danych z PLC przez Modbus
-// Rejestry:
-//   0: Pozycja siłownika (uint16, 0-100)
-//   4: Temperatura zewnętrzna (int16, /10)
-//   5: Temperatura CO (int16, /10)
+// Odczyt danych z czujnika HT73 przez Modbus
+// Rejestry Input Registers (0x04):
+//   2: Temperatura (int16, /10)
+//   3: Wilgotność (int16, /10)
 // ===================================
 bool readModbusData() {
   uint8_t result;
@@ -69,41 +69,47 @@ bool readModbusData() {
   
   // Retry logic - maksymalnie 3 próby
   while (retries < MODBUS_RETRY_COUNT) {
-    result = modbus.readHoldingRegisters(0, 6); // Odczyt rejestrów 0-5
+    // Dla czujnika HT73/SHT35 - Input Registers, start=2, count=2
+    result = modbus.readInputRegisters(2, 2); // Odczyt rejestrów 2-3 (temp + wilgotność)
     
     if (result == modbus.ku8MBSuccess) {
       // Pomyślnie odczytano dane
-      // Zapisz surowe wartości do tablicy
-      for (int i = 0; i < 6; i++) {
-        modbusRawRegisters[i] = modbus.getResponseBuffer(i);
-      }
+      // Zapisz surowe wartości do tablicy (przesunięcie indeksów!)
+      modbusRawRegisters[2] = modbus.getResponseBuffer(0); // Rejestr 2 czujnika → indeks 0 bufora
+      modbusRawRegisters[3] = modbus.getResponseBuffer(1); // Rejestr 3 czujnika → indeks 1 bufora
       
-      actuatorPos = modbusRawRegisters[0];
+      // Rejestr 2: Temperatura × 10
+      int16_t tempRaw = (int16_t)modbusRawRegisters[2];
+      float temperature = tempRaw / 10.0;
       
-      // Rejestry 4 i 5 zawierają temperatury jako int16 (dzielone przez 10)
-      int16_t tempExtRaw = (int16_t)modbusRawRegisters[4];
-      int16_t tempCORaw = (int16_t)modbusRawRegisters[5];
+      // Rejestr 3: Wilgotność × 10
+      int16_t humRaw = (int16_t)modbusRawRegisters[3];
+      float humidityValue = humRaw / 10.0;
       
-      tempEXT = tempExtRaw / 10.0;
-      tempCO = tempCORaw / 10.0;
+      // Dla kompatybilności z resztą systemu - zapisz temperaturę jako tempEXT
+      tempEXT = temperature;
+      humidity = humidityValue;
       
       modbusConnected = true;
       
-      Serial.printf("[Modbus] Odczyt OK - TempCO: %.1f°C, TempEXT: %.1f°C, Siłownik: %d%%\n", 
-                    tempCO, tempEXT, actuatorPos);
+      Serial.printf("[Modbus] Odczyt HT73 OK - Temp: %.1f°C, Wilgotność: %.1f%%\n", 
+                    temperature, humidityValue);
       
       // DEBUG: Wyświetl surowe wartości
-      Serial.println("[Modbus] === RAW DATA ===");
-      for (int i = 0; i < 6; i++) {
-        Serial.printf("  Reg[%d]: 0x%04X (%5d) | int16: %6d | float: %6.1f\n", 
-          i, 
-          modbusRawRegisters[i], 
-          modbusRawRegisters[i],
-          (int16_t)modbusRawRegisters[i],
-          ((int16_t)modbusRawRegisters[i]) / 10.0
-        );
-      }
-      Serial.println("[Modbus] ================");
+      Serial.println("[Modbus] === RAW DATA (HT73) ===");
+      Serial.printf("  Reg[2]: 0x%04X (%5d) | int16: %6d | Temp: %6.1f°C\n", 
+        modbusRawRegisters[2], 
+        modbusRawRegisters[2],
+        tempRaw,
+        temperature
+      );
+      Serial.printf("  Reg[3]: 0x%04X (%5d) | int16: %6d | Humi: %6.1f%%\n", 
+        modbusRawRegisters[3], 
+        modbusRawRegisters[3],
+        humRaw,
+        humidityValue
+      );
+      Serial.println("[Modbus] =======================");
       
       return true;
     } else {
