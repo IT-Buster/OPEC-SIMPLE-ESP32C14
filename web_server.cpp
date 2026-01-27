@@ -231,8 +231,12 @@ const char index_html[] PROGMEM = R"rawliteral(
           document.getElementById('uptime').innerText = formatUptime(data.uptime);
           
           // Wersja i data kompilacji
-          document.getElementById('firmwareVersion').textContent = data.version;
-          document.getElementById('buildDate').textContent = data.buildDate + ' ' + data.buildTime;
+          if (data.version) {
+            document.getElementById('firmwareVersion').textContent = data.version;
+          }
+          if (data.buildDate && data.buildTime) {
+            document.getElementById('buildDate').textContent = data.buildDate + ' ' + data.buildTime;
+          }
         })
         .catch(err => {
           console.error('Błąd odczytu danych:', err);
