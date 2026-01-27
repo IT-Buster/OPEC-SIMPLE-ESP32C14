@@ -29,6 +29,13 @@
 #include "web_server.h"
 
 // ===================================
+// Wersja firmware
+// ===================================
+#define FIRMWARE_VERSION "1.1.0"
+#define BUILD_DATE __DATE__
+#define BUILD_TIME __TIME__
+
+// ===================================
 // Obiekt Preferences (zapis konfiguracji)
 // ===================================
 Preferences preferences;
@@ -138,7 +145,8 @@ void setup() {
   Serial.println("========================================");
   Serial.println("  OPEC-SIMPLE-ESP32C14");
   Serial.println("  Sterownik systemu grzewczego");
-  Serial.println("  Wersja: 1.0.0");
+  Serial.printf("  Wersja: %s\n", FIRMWARE_VERSION);
+  Serial.printf("  Kompilacja: %s %s\n", BUILD_DATE, BUILD_TIME);
   Serial.println("========================================");
   Serial.println();
   
