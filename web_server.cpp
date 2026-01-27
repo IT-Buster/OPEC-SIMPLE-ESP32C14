@@ -842,13 +842,18 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       <div class="card full-width">
         <h2>📝 Logi komunikacji</h2>
         <div id="modbusLogs">Brak logów...</div>
-        <button onclick="clearLogs()" style="margin-top: 10px;">🗑️ Wyczyść logi</button>
+        <div style="margin-top: 10px;">
+          <button onclick="clearLogs()">🗑️ Wyczyść logi</button>
+          <button id="autoRefreshBtn" onclick="toggleAutoRefresh()">⏸️ Zatrzymaj auto-odświeżanie</button>
+        </div>
       </div>
     </main>
   </div>
 
   <script>
     let logs = [];
+    let autoRefreshEnabled = true;
+    let autoRefreshInterval = null;
     
     function addLog(message) {
       const timestamp = new Date().toLocaleTimeString();
@@ -860,6 +865,20 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
     function clearLogs() {
       logs = [];
       document.getElementById('modbusLogs').innerHTML = 'Brak logów...';
+    }
+    
+    function toggleAutoRefresh() {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('autoRefreshBtn');
+      if (autoRefreshEnabled) {
+        btn.textContent = '⏸️ Zatrzymaj auto-odświeżanie';
+        btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        addLog('Auto-odświeżanie włączone');
+      } else {
+        btn.textContent = '▶️ Włącz auto-odświeżanie';
+        btn.style.background = '#6b7280';
+        addLog('Auto-odświeżanie wyłączone');
+      }
     }
     
     async function testModbus() {
@@ -882,6 +901,9 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
         
         const data = await response.json();
         addLog(`Odczyt ${data.connected ? 'SUKCES' : 'BŁĄD'}`);
+        if (data.error) {
+          addLog(`⚠️ ${data.error}`);
+        }
         updateDisplay(data);
       } catch (error) {
         addLog(`Błąd: ${error.message}`);
@@ -920,7 +942,7 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       }
       
       // Temperatura
-      if (data.interpretedTemp !== undefined && data.interpretedTemp !== null) {
+      if (data.interpretedTemp !== undefined && data.interpretedTemp !== null && !isNaN(data.interpretedTemp)) {
         document.getElementById('sensorTemp').textContent = data.interpretedTemp.toFixed(1) + '°C';
         addLog(`Temperatura odczytana: ${data.interpretedTemp.toFixed(1)}°C`);
       } else {
@@ -929,8 +951,7 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
     }
     
     // Auto-refresh co 5 sekund
-    let autoRefreshEnabled = true;
-    setInterval(() => {
+    autoRefreshInterval = setInterval(() => {
       if (autoRefreshEnabled) {
         testModbus();
       }
@@ -1313,34 +1334,38 @@ void setupWebServer() {
       response["slaveID"] = slaveID;
       response["connected"] = success;
       
-      JsonArray registers = response.createNestedArray("registers");
-      for (int i = 0; i < count && i < 6; i++) {
-        JsonObject reg = registers.createNestedObject();
-        reg["index"] = startRegister + i;
-        
-        char hexStr[8];
-        snprintf(hexStr, sizeof(hexStr), "0x%04X", modbusRawRegisters[i]);
-        reg["hex"] = hexStr;
-        
-        reg["decimal"] = modbusRawRegisters[i];
-        
-        // Dodaj opis
-        if (startRegister + i == 2) {
-          reg["description"] = "Rejestr 2 (Temp*10)";
-        } else {
-          char desc[32];
-          snprintf(desc, sizeof(desc), "Rejestr %d", startRegister + i);
-          reg["description"] = desc;
-        }
+      if (!success) {
+        response["error"] = "Nie udało się odczytać danych z urządzenia Modbus. Sprawdź połączenie i parametry.";
       }
       
-      // Interpretacja temperatury z rejestru 2
-      if (startRegister <= 2 && (startRegister + count) > 2) {
-        int regIndex = 2 - startRegister;
-        int16_t tempRaw = (int16_t)modbusRawRegisters[regIndex];
-        response["interpretedTemp"] = tempRaw / 10.0;
-      } else {
-        response["interpretedTemp"] = nullptr;
+      JsonArray registers = response.createNestedArray("registers");
+      if (success) {
+        for (int i = 0; i < count && i < 6; i++) {
+          JsonObject reg = registers.createNestedObject();
+          reg["index"] = startRegister + i;
+          
+          char hexStr[8];
+          snprintf(hexStr, sizeof(hexStr), "0x%04X", modbusRawRegisters[i]);
+          reg["hex"] = hexStr;
+          
+          reg["decimal"] = modbusRawRegisters[i];
+          
+          // Dodaj opis
+          if (startRegister + i == 2) {
+            reg["description"] = "Rejestr 2 (Temp*10)";
+          } else {
+            char desc[32];
+            snprintf(desc, sizeof(desc), "Rejestr %d", startRegister + i);
+            reg["description"] = desc;
+          }
+        }
+        
+        // Interpretacja temperatury z rejestru 2
+        if (startRegister <= 2 && (startRegister + count) > 2) {
+          int regIndex = 2 - startRegister;
+          int16_t tempRaw = (int16_t)modbusRawRegisters[regIndex];
+          response["interpretedTemp"] = tempRaw / 10.0;
+        }
       }
       
       String responseStr;

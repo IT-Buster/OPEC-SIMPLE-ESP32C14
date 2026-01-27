@@ -208,6 +208,8 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) 
   if (!success) {
     modbusConnected = false;
     Serial.println("[Modbus] Test zakończony niepowodzeniem!");
+  } else {
+    Serial.printf("[Modbus] Test zakończony sukcesem, przywrócono Slave ID: %d\n", originalSlaveID);
   }
   
   return success;
