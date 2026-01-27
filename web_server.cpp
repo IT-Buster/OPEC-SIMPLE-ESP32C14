@@ -7,6 +7,14 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 
+// Wersja firmware - ALPHA (testowa)
+// Te same definicje co w głównym pliku .ino
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "1.0.0-ALPHA"
+#define BUILD_DATE __DATE__
+#define BUILD_TIME __TIME__
+#endif
+
 // ===================================
 // Obiekt serwera WWW
 // ===================================
@@ -139,6 +147,24 @@ const char index_html[] PROGMEM = R"rawliteral(
     .info-row:last-child { border-bottom: none; }
     .info-label { font-weight: 600; color: #666; }
     .info-value { color: #333; }
+    
+    .version-info {
+      margin-top: 10px;
+      font-size: 0.85em;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .alpha-badge {
+      display: inline-block;
+      background: rgba(255, 165, 0, 0.9);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
@@ -147,7 +173,8 @@ const char index_html[] PROGMEM = R"rawliteral(
       <h1>🏠 OPEC ESP32</h1>
       <p>Sterownik systemu grzewczego</p>
       <div class="version-info">
-        <small>Wersja: <span id="firmwareVersion">--</span> | Kompilacja: <span id="buildDate">--</span></small>
+        <span class="alpha-badge">🧪 WERSJA TESTOWA ALPHA</span><br>
+        <small>v<span id="firmwareVersion">--</span> | Kompilacja: <span id="buildDate">--</span></small>
       </div>
     </div>
     
@@ -194,6 +221,10 @@ const char index_html[] PROGMEM = R"rawliteral(
         </div>
       </div>
     </div>
+  </div>
+  
+  <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 0.8em; margin-top: 20px; padding: 10px;">
+    ⚠️ Wersja testowa ALPHA - nie używać w systemach produkcyjnych
   </div>
   
   <script>
@@ -246,6 +277,20 @@ const char index_html[] PROGMEM = R"rawliteral(
     // Odświeżanie co 2 sekundy
     updateData();
     setInterval(updateData, 2000);
+    
+    // Pobierz i wyświetl wersję firmware
+    function fetchVersion() {
+      fetch('/api/version')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('firmwareVersion').textContent = data.version;
+          document.getElementById('buildDate').textContent = data.buildDate + ' ' + data.buildTime;
+        })
+        .catch(err => console.error('Błąd pobierania wersji:', err));
+    }
+    
+    // Wywołaj przy załadowaniu strony
+    fetchVersion();
   </script>
 </body>
 </html>
@@ -1031,6 +1076,18 @@ void handleDiagnostics(AsyncWebServerRequest *request) {
   request->send_P(200, "text/html", diagnostics_html);
 }
 
+void handleVersion(AsyncWebServerRequest *request) {
+  StaticJsonDocument<256> doc;
+  doc["version"] = FIRMWARE_VERSION;
+  doc["buildDate"] = BUILD_DATE;
+  doc["buildTime"] = BUILD_TIME;
+  doc["isAlpha"] = true;
+  
+  String response;
+  serializeJson(doc, response);
+  request->send(200, "application/json", response);
+}
+
 // ===================================
 // Konfiguracja serwera WWW i endpointów API
 // ===================================
@@ -1043,6 +1100,12 @@ void setupWebServer() {
   server.on("/diagnostics.html", HTTP_GET, handleDiagnostics);
   
   Serial.println("[WebServer] Strony HTML wbudowane w kod (bez SPIFFS)");
+  
+  // ===================================
+  // API Endpoint: GET /api/version
+  // Zwraca wersję firmware i datę kompilacji
+  // ===================================
+  server.on("/api/version", HTTP_GET, handleVersion);
   
   // ===================================
   // API Endpoint: GET /api/status

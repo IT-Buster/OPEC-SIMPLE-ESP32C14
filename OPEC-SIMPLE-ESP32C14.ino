@@ -17,6 +17,11 @@
  * Bazuje na projekcie: OPEC-SIMPLE (Node-RED)
  */
 
+// Wersja firmware - ALPHA (testowa)
+#define FIRMWARE_VERSION "1.0.0-ALPHA"
+#define BUILD_DATE __DATE__
+#define BUILD_TIME __TIME__
+
 // Biblioteki systemowe ESP32
 #include <WiFi.h>
 #include <ESPmDNS.h>
