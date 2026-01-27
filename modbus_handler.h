@@ -7,7 +7,8 @@
 // Dane odczytane z PLC przez Modbus
 // ===================================
 extern float tempCO;          // Temperatura CO (°C)
-extern float tempEXT;         // Temperatura zewnętrzna (°C)
+extern float tempEXT;         // Temperatura zewnętrzna (°C) - z czujnika HT73
+extern float humidity;        // Wilgotność (%) - z czujnika HT73
 extern uint16_t actuatorPos;  // Pozycja siłownika (0-100)
 extern bool modbusConnected;  // Status połączenia Modbus
 extern uint16_t modbusRawRegisters[6];  // Surowe wartości rejestrów 0-5

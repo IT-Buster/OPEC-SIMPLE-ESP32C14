@@ -87,6 +87,7 @@ struct Config {
   float hysteresis;
   bool thermostatActive;
   float heatingCurve[HEATING_CURVE_POINTS][2]; // [temp zewn., temp CO]
+  bool modbusUseInputRegisters; // true dla HT73, false dla PLC
   bool configInitialized; // Flaga pierwszego uruchomienia
 };
 
