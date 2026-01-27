@@ -1049,7 +1049,7 @@ void setupWebServer() {
   // Zwraca aktualny stan systemu w JSON
   // ===================================
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<768> doc;  // Zwiększono z 512 na 768 dla pól wersji
     
     doc["tempCO"] = tempCO;
     doc["tempEXT"] = tempEXT;
