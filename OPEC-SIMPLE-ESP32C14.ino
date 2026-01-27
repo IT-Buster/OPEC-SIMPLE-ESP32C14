@@ -138,7 +138,8 @@ void setup() {
   Serial.println("========================================");
   Serial.println("  OPEC-SIMPLE-ESP32C14");
   Serial.println("  Sterownik systemu grzewczego");
-  Serial.println("  Wersja: 1.0.0");
+  Serial.printf("  Wersja: %s\n", FIRMWARE_VERSION);
+  Serial.printf("  Kompilacja: %s %s\n", BUILD_DATE, BUILD_TIME);
   Serial.println("========================================");
   Serial.println();
   

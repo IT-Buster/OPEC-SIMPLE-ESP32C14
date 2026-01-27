@@ -123,6 +123,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
     nav a:hover { background: #764ba2; }
     
+    .version-info {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.85em;
+      margin-top: 10px;
+    }
+    
     .info-row {
       display: flex;
       justify-content: space-between;
@@ -139,6 +146,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     <div class="header">
       <h1>🏠 OPEC ESP32</h1>
       <p>Sterownik systemu grzewczego</p>
+      <div class="version-info">
+        <small>Wersja: <span id="firmwareVersion">--</span> | Kompilacja: <span id="buildDate">--</span></small>
+      </div>
     </div>
     
     <nav>
@@ -219,6 +229,14 @@ const char index_html[] PROGMEM = R"rawliteral(
           
           // Uptime
           document.getElementById('uptime').innerText = formatUptime(data.uptime);
+          
+          // Wersja i data kompilacji
+          if (data.version) {
+            document.getElementById('firmwareVersion').textContent = data.version;
+          }
+          if (data.buildDate && data.buildTime) {
+            document.getElementById('buildDate').textContent = data.buildDate + ' ' + data.buildTime;
+          }
         })
         .catch(err => {
           console.error('Błąd odczytu danych:', err);
@@ -1031,7 +1049,7 @@ void setupWebServer() {
   // Zwraca aktualny stan systemu w JSON
   // ===================================
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<768> doc;  // Zwiększono z 512 na 768 dla pól wersji
     
     doc["tempCO"] = tempCO;
     doc["tempEXT"] = tempEXT;
@@ -1043,6 +1061,9 @@ void setupWebServer() {
     doc["uptime"] = millis() / 1000;
     doc["freeHeap"] = ESP.getFreeHeap();
     doc["chipModel"] = ESP.getChipModel();
+    doc["version"] = FIRMWARE_VERSION;
+    doc["buildDate"] = BUILD_DATE;
+    doc["buildTime"] = BUILD_TIME;
     
     String response;
     serializeJson(doc, response);
