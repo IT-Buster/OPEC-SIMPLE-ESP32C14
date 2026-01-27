@@ -21,19 +21,15 @@ uint16_t modbusRawRegisters[6] = {0, 0, 0, 0, 0, 0};
 // Inicjalizacja Modbus RTU
 // ===================================
 void setupModbus() {
-  // ES32C14 używa Serial (UART0) dla RS485
+  // ⚠️ KRYTYCZNE: ES32C14 używa Serial (UART0) dla RS485
   // Zgodnie z dokumentacją producenta EletechSup
-  Serial.begin(config.modbusBaudrate, SERIAL_8N1, RS485_RX_PIN, RS485_TX_PIN);
+  // Serial Monitor NIE będzie działał - używaj WebUI!
+  Serial.begin(config.modbusBaudrate, SERIAL_8N1);
+  Serial.setTimeout(5);
   
   // Konfiguracja pinu DE/RE (GPIO 22)
   pinMode(RS485_DE_RE_PIN, OUTPUT);
   digitalWrite(RS485_DE_RE_PIN, LOW); // Tryb RX (odbiór)
-  
-  Serial.println("[Modbus] Inicjalizacja zakończona");
-  Serial.printf("[Modbus] Baudrate: %d, Unit ID: %d\n", 
-                config.modbusBaudrate, config.modbusUnitID);
-  Serial.printf("[Modbus] TX: GPIO%d, RX: GPIO%d, DE/RE: GPIO%d\n", 
-                RS485_TX_PIN, RS485_RX_PIN, RS485_DE_RE_PIN);
   
   // Inicjalizacja biblioteki ModbusMaster
   modbus.begin(config.modbusUnitID, Serial);
@@ -41,6 +37,8 @@ void setupModbus() {
   // Callback dla przełączania TX/RX
   modbus.preTransmission(preTransmission);
   modbus.postTransmission(postTransmission);
+  
+  // UWAGA: Serial zajęty przez RS485 - brak logów!
 }
 
 // ===================================
@@ -58,8 +56,11 @@ void postTransmission() {
 }
 
 // ===================================
-// Odczyt danych z czujnika HT73 lub PLC przez Modbus
-// Rejestry Input Registers (0x04) dla HT73:
+// Odczyt danych z czujnika HT73 przez Modbus
+// Rejestry Holding Registers (0x03) dla HT73:
+//   0: Wilgotność (int16, /10)
+//   1: Temperatura (int16, /10)
+// Rejestry Input Registers (0x04) dla starszej konfiguracji:
 //   2: Temperatura (int16, /10)
 //   3: Wilgotność (int16, /10)
 // Rejestry Holding Registers (0x03) dla PLC:
@@ -74,8 +75,8 @@ bool readModbusData() {
   // Retry logic - maksymalnie 3 próby
   while (retries < MODBUS_RETRY_COUNT) {
     if (config.modbusUseInputRegisters) {
-      // Tryb czujnika HT73/SHT35 - Input Registers
-      result = modbus.readInputRegisters(2, 2); // Odczyt rejestrów 2-3 (temp + wilgotność)
+      // Tryb czujnika HT73 - Holding Registers 0-1 (nowa konfiguracja)
+      result = modbus.readHoldingRegisters(0, 2); // Odczyt rejestrów 0-1 (wilgotność + temp)
     } else {
       // Tryb PLC - Holding Registers
       result = modbus.readHoldingRegisters(0, 6); // Odczyt rejestrów 0-5
@@ -89,43 +90,29 @@ bool readModbusData() {
           modbusRawRegisters[i] = 0;
         }
         
-        // Zapisz surowe wartości do tablicy (przesunięcie indeksów!)
-        modbusRawRegisters[2] = modbus.getResponseBuffer(0); // Rejestr 2 czujnika → indeks 0 bufora
-        modbusRawRegisters[3] = modbus.getResponseBuffer(1); // Rejestr 3 czujnika → indeks 1 bufora
+        // Zapisz surowe wartości do tablicy
+        modbusRawRegisters[0] = modbus.getResponseBuffer(0); // Rejestr 0: Wilgotność
+        modbusRawRegisters[1] = modbus.getResponseBuffer(1); // Rejestr 1: Temperatura
         
-        // Rejestr 2: Temperatura × 10
-        int16_t tempRaw = (int16_t)modbusRawRegisters[2];
-        float temperature = tempRaw / 10.0;
-        
-        // Rejestr 3: Wilgotność × 10
-        int16_t humRaw = (int16_t)modbusRawRegisters[3];
+        // Rejestr 0: Wilgotność × 10
+        int16_t humRaw = (int16_t)modbusRawRegisters[0];
         float humidityValue = humRaw / 10.0;
         
+        // Rejestr 1: Temperatura × 10
+        int16_t tempRaw = (int16_t)modbusRawRegisters[1];
+        float temperature = tempRaw / 10.0;
+        
         // Dla kompatybilności z resztą systemu - zapisz temperaturę jako tempEXT
-        // tempEXT jest używany przez resztę systemu jako główna temperatura zewnętrzna
         tempEXT = temperature;
         humidity = humidityValue;
         
+        // Wyzeruj pozostałe (dla kompatybilności)
+        tempCO = 0.0;
+        actuatorPos = 0;
+        
         modbusConnected = true;
         
-        Serial.printf("[Modbus] Odczyt HT73 OK - Temp: %.1f°C, Wilgotność: %.1f%%\n", 
-                      temperature, humidityValue);
-        
-        // DEBUG: Wyświetl surowe wartości
-        Serial.println("[Modbus] === RAW DATA (HT73) ===");
-        Serial.printf("  Reg[2]: 0x%04X (%5d) | int16: %6d | Temp: %6.1f°C\n", 
-          modbusRawRegisters[2], 
-          modbusRawRegisters[2],
-          tempRaw,
-          temperature
-        );
-        Serial.printf("  Reg[3]: 0x%04X (%5d) | int16: %6d | Humi: %6.1f%%\n", 
-          modbusRawRegisters[3], 
-          modbusRawRegisters[3],
-          humRaw,
-          humidityValue
-        );
-        Serial.println("[Modbus] =======================");
+        // UWAGA: Brak logów Serial - Serial zajęty przez RS485!
       } else {
         // Pomyślnie odczytano dane z PLC
         // Zapisz surowe wartości do tablicy
@@ -143,37 +130,20 @@ bool readModbusData() {
         tempCO = tempCORaw / 10.0;
         
         modbusConnected = true;
-        
-        Serial.printf("[Modbus] Odczyt PLC OK - TempCO: %.1f°C, TempEXT: %.1f°C, Siłownik: %d%%\n", 
-                      tempCO, tempEXT, actuatorPos);
-        
-        // DEBUG: Wyświetl surowe wartości
-        Serial.println("[Modbus] === RAW DATA (PLC) ===");
-        for (int i = 0; i < 6; i++) {
-          Serial.printf("  Reg[%d]: 0x%04X (%5d) | int16: %6d | float: %6.1f\n", 
-            i, 
-            modbusRawRegisters[i], 
-            modbusRawRegisters[i],
-            (int16_t)modbusRawRegisters[i],
-            ((int16_t)modbusRawRegisters[i]) / 10.0
-          );
-        }
-        Serial.println("[Modbus] ================");
       }
       
       return true;
     } else {
       // Błąd odczytu
       retries++;
-      Serial.printf("[Modbus] Błąd odczytu (próba %d/%d) - kod: 0x%02X\n", 
-                    retries, MODBUS_RETRY_COUNT, result);
-      delay(500); // Odczekaj przed kolejną próbą
+      if (retries < MODBUS_RETRY_COUNT) {
+        delay(MODBUS_RETRY_DELAY);
+      }
     }
   }
   
   // Wszystkie próby nie powiodły się
   modbusConnected = false;
-  Serial.println("[Modbus] Połączenie nieudane po wszystkich próbach!");
   return false;
 }
 
@@ -190,10 +160,10 @@ bool writeActuatorPosition(uint16_t position) {
   uint8_t result = modbus.writeSingleRegister(4, position);
   
   if (result == modbus.ku8MBSuccess) {
-    Serial.printf("[Modbus] Zapis siłownika: %d%%\n", position);
+    // Serial zajęty przez RS485 - brak logów
     return true;
   } else {
-    Serial.printf("[Modbus] Błąd zapisu siłownika - kod: 0x%02X\n", result);
+    // Serial zajęty przez RS485 - brak logów
     return false;
   }
 }
@@ -205,7 +175,7 @@ bool writeActuatorPosition(uint16_t position) {
 bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) {
   // Walidacja parametrów
   if (slaveID < 1 || slaveID > 247 || count < 1 || count > 125) {
-    Serial.println("[Modbus] Nieprawidłowe parametry testu");
+    // Serial zajęty przez RS485 - brak logów
     return false;
   }
   
@@ -235,27 +205,14 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) 
       modbusConnected = true;
       success = true;
       
-      Serial.printf("[Modbus] Test odczytu OK - SlaveID: %d, Start: %d, Count: %d\n", 
-                    slaveID, startRegister, count);
-      
-      // Szczegółowe logowanie
-      Serial.println("[Modbus] === RAW DATA (TEST) ===");
-      for (int i = 0; i < count && i < 6; i++) {
-        Serial.printf("  Reg[%d]: 0x%04X (%d) | int16: %d\n", 
-          startRegister + i, 
-          modbusRawRegisters[i], 
-          modbusRawRegisters[i],
-          (int16_t)modbusRawRegisters[i]
-        );
-      }
-      Serial.println("[Modbus] ====================");
+      // Serial zajęty przez RS485 - brak logów
       
       break;
     } else {
       retries++;
-      Serial.printf("[Modbus] Błąd testu (próba %d/%d) - kod: 0x%02X\n", 
-                    retries, MODBUS_RETRY_COUNT, result);
-      delay(500);
+      if (retries < MODBUS_RETRY_COUNT) {
+        delay(MODBUS_RETRY_DELAY);
+      }
     }
   }
   
@@ -264,9 +221,7 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) 
   
   if (!success) {
     modbusConnected = false;
-    Serial.println("[Modbus] Test zakończony niepowodzeniem!");
-  } else {
-    Serial.printf("[Modbus] Test zakończony sukcesem, przywrócono Slave ID: %d\n", originalSlaveID);
+    // Serial zajęty przez RS485 - brak logów
   }
   
   return success;

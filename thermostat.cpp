@@ -28,8 +28,7 @@ float calculateTargetTemp(float tempExternal) {
       float slope = (y2 - y1) / (x2 - x1);
       float interpolated = y1 + slope * (tempExternal - x1);
       
-      Serial.printf("[Termostat] Interpolacja: %.1f°C zewn. -> %.1f°C CO (między [%.1f,%.1f] i [%.1f,%.1f])\n",
-                    tempExternal, interpolated, x1, y1, x2, y2);
+      // Serial zajęty przez RS485 - brak logów
       
       return interpolated;
     }
@@ -37,12 +36,10 @@ float calculateTargetTemp(float tempExternal) {
   
   // Temperatura poza zakresem krzywej - zwróć wartość skrajną
   if (tempExternal < config.heatingCurve[0][0]) {
-    Serial.printf("[Termostat] Temp. zewn. %.1f°C poniżej krzywej, zwracam %.1f°C CO\n",
-                  tempExternal, config.heatingCurve[0][1]);
+    // Serial zajęty przez RS485 - brak logów
     return config.heatingCurve[0][1];
   } else {
-    Serial.printf("[Termostat] Temp. zewn. %.1f°C powyżej krzywej, zwracam %.1f°C CO\n",
-                  tempExternal, config.heatingCurve[HEATING_CURVE_POINTS-1][1]);
+    // Serial zajęty przez RS485 - brak logów
     return config.heatingCurve[HEATING_CURVE_POINTS-1][1];
   }
 }
@@ -62,7 +59,7 @@ void runThermostat() {
   
   // Sprawdź czy mamy połączenie z Modbus
   if (!modbusConnected) {
-    Serial.println("[Termostat] Brak połączenia Modbus - pomijam");
+    // Serial zajęty przez RS485 - brak logów
     return;
   }
   
@@ -72,26 +69,25 @@ void runThermostat() {
   // Oblicz różnicę między rzeczywistą a zadaną temperaturą
   float tempDiff = targetTemp - tempCO;
   
-  Serial.printf("[Termostat] TempCO: %.1f°C, Nastawa: %.1f°C, Różnica: %.1f°C, Histereza: ±%.1f°C\n",
-                tempCO, targetTemp, tempDiff, config.hysteresis);
+  // Serial zajęty przez RS485 - brak logów
   
   // Logika z histerezą
   if (tempCO < targetTemp - config.hysteresis) {
     // Za zimno - otwórz siłownik (100%)
     if (lastActuatorCmd != 100) {
-      Serial.println("[Termostat] Akcja: GRZEJ (siłownik 100%)");
+      // Serial zajęty przez RS485 - brak logów
       writeActuatorPosition(100);
       lastActuatorCmd = 100;
     }
   } else if (tempCO > targetTemp + config.hysteresis) {
     // Za ciepło - zamknij siłownik (0%)
     if (lastActuatorCmd != 0) {
-      Serial.println("[Termostat] Akcja: STOP (siłownik 0%)");
+      // Serial zajęty przez RS485 - brak logów
       writeActuatorPosition(0);
       lastActuatorCmd = 0;
     }
   } else {
     // W zakresie histerezy - nie zmieniaj
-    Serial.println("[Termostat] Akcja: UTRZYMUJ (w zakresie histerezy)");
+    // Serial zajęty przez RS485 - brak logów
   }
 }

@@ -16,28 +16,30 @@
 // Zgodnie z przykładem producenta EletechSup:
 // http://www.485io.com
 // 
-// ES32C14 ma WBUDOWANY moduł RS485 podłączony do:
-// - IO1 (GPIO1)  → RS485 TX (Data Input)
-// - IO3 (GPIO3)  → RS485 RX (Receive Output) 
-// - IO22 (GPIO22)→ RS485 DE/RE (Direction Enable)
+// ES32C14 ma WBUDOWANY moduł RS485 podłączony do Serial (UART0):
+// - GPIO1 (TX) → RS485 TX (Data Input)
+// - GPIO3 (RX) → RS485 RX (Receive Output) 
+// - GPIO22    → RS485 DE/RE (Direction Enable)
 //
-// ⚠️ UWAGA dla ESP32-D0WD (klasyczny ESP32):
-// GPIO 1 i 3 to UART0 (Serial), te same piny co USB Serial!
-// Podczas komunikacji Modbus Serial Monitor nie będzie działał.
-// Używaj WebUI do monitorowania statusu.
+// ⚠️ KRYTYCZNE: Serial (UART0) jest używany przez RS485!
+// - Serial Monitor NIE będzie działał podczas komunikacji Modbus
+// - TX/RX to domyślne piny Serial - nie definiujemy ich osobno
+// - Używaj WebUI (http://opec-esp32.local) do monitorowania statusu
+// - Debugging: Użyj interfejsu WWW lub LED diagnostycznego
 
-#define RS485_TX_PIN     1   // IO1 → TX (Serial/UART0)
-#define RS485_RX_PIN     3   // IO3 → RX (Serial/UART0)
+// RS485 używa Serial (UART0) - domyślne piny TX(GPIO1)/RX(GPIO3)
+// Tylko DE/RE wymaga definicji
 #define RS485_DE_RE_PIN  22  // IO22 → DE+RE (Direction Enable)
 
 // ============================================
 // KONFIGURACJA MODBUS
 // ============================================
-#define MODBUS_BAUDRATE      115200
-#define MODBUS_UNIT_ID       2       // Domyślny Slave ID (musi być zgodny z konfiguracją PLC!)
+#define MODBUS_BAUDRATE      9600    // HT73 domyślnie: 9600
+#define MODBUS_UNIT_ID       5       // Domyślny Slave ID dla HT73
 #define MODBUS_TIMEOUT       1000    // ms
 #define MODBUS_RETRY_COUNT   3
 #define MODBUS_READ_INTERVAL 15000   // ms (15 sekund)
+#define MODBUS_RETRY_DELAY   500     // ms (opóźnienie między próbami)
 
 // ===================================
 // Parametry WiFi AP (Access Point)

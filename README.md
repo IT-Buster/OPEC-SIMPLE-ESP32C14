@@ -167,6 +167,21 @@ If your ES32C14 board has **ESP32-D0WD-V3** chip (instead of ESP32-C3):
 - Use **WebUI Dashboard** (`http://opec-esp32.local`) to monitor system status
 - Debugging: Use Serial1 (GPIO 9 TX, GPIO 10 RX) with external USB-Serial adapter
 
+## ⚠️ UWAGA - Serial Monitor NIE działa!
+
+**Serial (UART0) jest używany przez RS485 zgodnie z projektem płyty ES32C14.**
+
+Po wgraniu kodu:
+- ✅ **Serial Monitor przestanie działać** (Serial zajęty przez RS485)
+- ✅ **Czujnik HT73 zacznie odpowiadać** (domyślnie: Slave ID=5, Baudrate=9600)
+- ✅ **Monitorowanie systemu tylko przez interfejs WWW:**
+  - Dashboard: `http://opec-esp32.local` lub `http://192.168.4.1` (tryb AP)
+  - Strona Dashboard - temperatura i wilgotność w czasie rzeczywistym
+  - Strona Diagnostyka - surowe rejestry Modbus
+  - Strona Ustawienia - konfiguracja Modbus (Slave ID, Baudrate)
+
+**Aby debugować przez Serial Monitor, odłącz czujnik RS485 i zmień kod aby używał Serial2.**
+
 **Wiring:**
 ```
 ES32C14 RS485 Port → PLC Modbus

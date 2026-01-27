@@ -72,10 +72,10 @@ void loadConfig() {
       config.heatingCurve[i][1] = preferences.getFloat(key, DEFAULT_HEATING_CURVE[i][1]);
     }
     
-    Serial.println("[Config] Wczytano konfigurację z Flash");
+    // Serial zajęty przez RS485 - brak logów
   } else {
     // Pierwsze uruchomienie - użyj domyślnych wartości
-    Serial.println("[Config] Pierwsze uruchomienie - używam wartości domyślnych");
+    // Serial zajęty przez RS485 - brak logów
     resetConfig();
   }
   
@@ -108,7 +108,7 @@ void saveConfig() {
   }
   
   preferences.end();
-  Serial.println("[Config] Konfiguracja zapisana do Flash");
+  // Serial zajęty przez RS485 - brak logów
 }
 
 // ===================================
@@ -131,33 +131,18 @@ void resetConfig() {
   }
   
   saveConfig();
-  Serial.println("[Config] Reset do wartości domyślnych");
+  // Serial zajęty przez RS485 - brak logów
 }
 
 // ===================================
 // SETUP - Inicjalizacja systemu
 // ===================================
 void setup() {
-  // Inicjalizacja portu szeregowego
-  Serial.begin(115200);
+  // ⚠️ UWAGA: Serial (UART0) używany przez RS485!
+  // Serial Monitor NIE będzie działał - używaj WebUI do monitorowania
+  // Inicjalizacja Serial zostanie wykonana w setupModbus()
+  
   delay(1000);
-  
-  Serial.println();
-  Serial.println("========================================");
-  Serial.println("  OPEC-SIMPLE-ESP32C14");
-  Serial.println("  Sterownik systemu grzewczego");
-  Serial.printf("  Wersja: %s\n", FIRMWARE_VERSION);
-  Serial.printf("  Kompilacja: %s %s\n", BUILD_DATE, BUILD_TIME);
-  Serial.println("========================================");
-  Serial.println();
-  
-  // Informacje o chipie
-  Serial.printf("Chip: %s\n", ESP.getChipModel());
-  Serial.printf("Rdzenie: %d\n", ESP.getChipCores());
-  Serial.printf("Częstotliwość: %d MHz\n", ESP.getCpuFreqMHz());
-  Serial.printf("Flash: %d MB\n", ESP.getFlashChipSize() / (1024 * 1024));
-  Serial.printf("RAM: %d KB\n", ESP.getHeapSize() / 1024);
-  Serial.println();
   
   // Wczytaj konfigurację
   loadConfig();
@@ -165,28 +150,14 @@ void setup() {
   // Konfiguracja WiFi
   setupWiFi();
   
-  // Konfiguracja Modbus
+  // Konfiguracja Modbus (to zainicjalizuje Serial dla RS485)
   setupModbus();
   
   // Konfiguracja serwera WWW
   setupWebServer();
   
-  Serial.println();
-  Serial.println("========================================");
-  Serial.println("  System gotowy!");
-  Serial.println("========================================");
-  Serial.println();
-  
-  if (WiFi.getMode() == WIFI_AP) {
-    Serial.printf("Połącz się z WiFi: %s\n", WiFi.softAPSSID().c_str());
-    Serial.printf("Hasło: %s\n", AP_PASSWORD);
-    Serial.printf("Otwórz: http://%s\n", WiFi.softAPIP().toString().c_str());
-  } else {
-    Serial.printf("Dostępny pod: http://%s.local\n", MDNS_HOSTNAME);
-    Serial.printf("Lub: http://%s\n", WiFi.localIP().toString().c_str());
-  }
-  
-  Serial.println();
+  // System gotowy - brak logów Serial (zajęty przez RS485)
+  // Monitoruj przez WebUI: http://opec-esp32.local
 }
 
 // ===================================
