@@ -145,6 +145,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       <a href="/">Dashboard</a>
       <a href="/settings.html">Ustawienia</a>
       <a href="/curve.html">Krzywa grzewcza</a>
+      <a href="/diagnostics.html">Diagnostyka</a>
     </nav>
     
     <div class="card">
@@ -339,6 +340,7 @@ const char settings_html[] PROGMEM = R"rawliteral(
       <a href="/">Dashboard</a>
       <a href="/settings.html">Ustawienia</a>
       <a href="/curve.html">Krzywa grzewcza</a>
+      <a href="/diagnostics.html">Diagnostyka</a>
     </nav>
     
     <div class="card">
@@ -526,6 +528,7 @@ const char curve_html[] PROGMEM = R"rawliteral(
       <a href="/">Dashboard</a>
       <a href="/settings.html">Ustawienia</a>
       <a href="/curve.html">Krzywa grzewcza</a>
+      <a href="/diagnostics.html">Diagnostyka</a>
     </nav>
     
     <div class="card">
@@ -609,6 +612,340 @@ const char curve_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+// Diagnostyka - Strona diagnostyki Modbus z surowymi danymi z rejestrów
+// Testowanie komunikacji z czujnikiem HT73/SHT35 (Slave ID: 5)
+const char diagnostics_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEC ESP32 - Diagnostyka Modbus</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    .header { 
+      text-align: center; 
+      color: white; 
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    
+    nav {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+    nav a:hover, nav a.active { background: #764ba2; }
+    
+    .card { 
+      background: white; 
+      border-radius: 15px; 
+      padding: 25px; 
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .card h2 { margin-bottom: 15px; color: #333; }
+    
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+      gap: 20px; 
+    }
+    .full-width { grid-column: 1 / -1; }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #666;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover { transform: translateY(-2px); }
+    
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .status-row:last-child { border-bottom: none; }
+    
+    .badge {
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    .status-connected { background: #10b981; color: white; }
+    .status-disconnected { background: #ef4444; color: white; }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table th, table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    table th {
+      background: #f3f4f6;
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .temp-display {
+      font-size: 3em;
+      font-weight: bold;
+      color: #667eea;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    #modbusLogs {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.9em;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔍 Diagnostyka Modbus</h1>
+    </div>
+    
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/settings.html">Ustawienia</a>
+      <a href="/curve.html">Krzywa grzewcza</a>
+      <a href="/diagnostics.html" class="active">Diagnostyka</a>
+    </nav>
+    
+    <main>
+      <div class="grid">
+        <!-- Panel sterowania testem -->
+        <div class="card">
+          <h2>🔧 Test komunikacji Modbus</h2>
+          <div class="form-group">
+            <label>Slave ID:</label>
+            <input type="number" id="testSlaveID" min="1" max="247" value="5">
+          </div>
+          <div class="form-group">
+            <label>Rejestr startowy:</label>
+            <input type="number" id="testStartReg" min="0" max="65535" value="0">
+          </div>
+          <div class="form-group">
+            <label>Liczba rejestrów:</label>
+            <input type="number" id="testCount" min="1" max="10" value="5">
+          </div>
+          <button onclick="testModbus()">🚀 Wykonaj test</button>
+        </div>
+
+        <!-- Status połączenia -->
+        <div class="card">
+          <h2>📊 Status połączenia</h2>
+          <div class="status-row">
+            <span>Slave ID:</span>
+            <span id="currentSlaveID">--</span>
+          </div>
+          <div class="status-row">
+            <span>Status:</span>
+            <span id="modbusStatus" class="badge">--</span>
+          </div>
+          <div class="status-row">
+            <span>Ostatni odczyt:</span>
+            <span id="lastRead">--</span>
+          </div>
+        </div>
+
+        <!-- Interpretacja dla czujnika HT73/SHT35 -->
+        <div class="card">
+          <h2>🌡️ Odczyt temperatury (HT73/SHT35)</h2>
+          <div class="temp-display" id="sensorTemp">--</div>
+          <p style="text-align: center; color: #666;">
+            Temperatura z rejestru 2 (wartość/10)
+          </p>
+        </div>
+      </div>
+
+      <!-- Tabela surowych rejestrów -->
+      <div class="card full-width">
+        <h2>📋 Surowe wartości rejestrów</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Rejestr</th>
+              <th>HEX</th>
+              <th>Decimal</th>
+              <th>Binary</th>
+              <th>Int16</th>
+              <th>Float (/10)</th>
+              <th>Opis</th>
+            </tr>
+          </thead>
+          <tbody id="registersTable">
+            <tr><td colspan="7" style="text-align: center;">Brak danych...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Logi komunikacji -->
+      <div class="card full-width">
+        <h2>📝 Logi komunikacji</h2>
+        <div id="modbusLogs">Brak logów...</div>
+        <button onclick="clearLogs()" style="margin-top: 10px;">🗑️ Wyczyść logi</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let logs = [];
+    
+    function addLog(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      logs.unshift(`[${timestamp}] ${message}`);
+      if (logs.length > 50) logs.pop();
+      document.getElementById('modbusLogs').innerHTML = logs.join('<br>');
+    }
+    
+    function clearLogs() {
+      logs = [];
+      document.getElementById('modbusLogs').innerHTML = 'Brak logów...';
+    }
+    
+    async function testModbus() {
+      const slaveID = document.getElementById('testSlaveID').value;
+      const startReg = document.getElementById('testStartReg').value;
+      const count = document.getElementById('testCount').value;
+      
+      addLog(`Wysyłanie testu Modbus: Slave=${slaveID}, Start=${startReg}, Count=${count}`);
+      
+      try {
+        const response = await fetch('/api/modbus-test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            slaveID: parseInt(slaveID),
+            startRegister: parseInt(startReg),
+            count: parseInt(count)
+          })
+        });
+        
+        const data = await response.json();
+        addLog(`Odczyt ${data.connected ? 'SUKCES' : 'BŁĄD'}`);
+        updateDisplay(data);
+      } catch (error) {
+        addLog(`Błąd: ${error.message}`);
+      }
+    }
+    
+    function updateDisplay(data) {
+      document.getElementById('currentSlaveID').textContent = data.slaveID || '--';
+      document.getElementById('modbusStatus').textContent = data.connected ? 'Połączony' : 'Błąd';
+      document.getElementById('modbusStatus').className = data.connected ? 'badge status-connected' : 'badge status-disconnected';
+      document.getElementById('lastRead').textContent = new Date().toLocaleTimeString();
+      
+      // Wypełnij tabelę rejestrów
+      const tbody = document.getElementById('registersTable');
+      tbody.innerHTML = '';
+      
+      if (data.registers && data.registers.length > 0) {
+        data.registers.forEach(reg => {
+          const row = tbody.insertRow();
+          const binary = reg.decimal.toString(2).padStart(16, '0');
+          const int16 = reg.decimal > 32767 ? reg.decimal - 65536 : reg.decimal;
+          const float = (int16 / 10.0).toFixed(1);
+          
+          row.innerHTML = `
+            <td><strong>${reg.index}</strong></td>
+            <td style="font-family: monospace;">${reg.hex}</td>
+            <td>${reg.decimal}</td>
+            <td style="font-family: monospace; font-size: 0.8em;">${binary}</td>
+            <td>${int16}</td>
+            <td>${float}</td>
+            <td>${reg.description || ''}</td>
+          `;
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Brak danych</td></tr>';
+      }
+      
+      // Temperatura
+      if (data.interpretedTemp !== undefined && data.interpretedTemp !== null) {
+        document.getElementById('sensorTemp').textContent = data.interpretedTemp.toFixed(1) + '°C';
+        addLog(`Temperatura odczytana: ${data.interpretedTemp.toFixed(1)}°C`);
+      } else {
+        document.getElementById('sensorTemp').textContent = '--';
+      }
+    }
+    
+    // Auto-refresh co 5 sekund
+    let autoRefreshEnabled = true;
+    setInterval(() => {
+      if (autoRefreshEnabled) {
+        testModbus();
+      }
+    }, 5000);
+    
+    // Pierwszy odczyt po załadowaniu
+    window.onload = () => {
+      addLog('Strona diagnostyki załadowana');
+      setTimeout(testModbus, 500);
+    };
+  </script>
+</body>
+</html>
+)rawliteral";
+
 // ===================================
 // Pomocnicza funkcja - generowanie unikalnego SSID
 // ===================================
@@ -676,6 +1013,10 @@ void handleCurve(AsyncWebServerRequest *request) {
   request->send_P(200, "text/html", curve_html);
 }
 
+void handleDiagnostics(AsyncWebServerRequest *request) {
+  request->send_P(200, "text/html", diagnostics_html);
+}
+
 // ===================================
 // Konfiguracja serwera WWW i endpointów API
 // ===================================
@@ -685,6 +1026,7 @@ void setupWebServer() {
   server.on("/index.html", HTTP_GET, handleRoot);
   server.on("/settings.html", HTTP_GET, handleSettings);
   server.on("/curve.html", HTTP_GET, handleCurve);
+  server.on("/diagnostics.html", HTTP_GET, handleDiagnostics);
   
   Serial.println("[WebServer] Strony HTML wbudowane w kod (bez SPIFFS)");
   
@@ -891,6 +1233,121 @@ void setupWebServer() {
     serializeJson(doc, response);
     request->send(200, "application/json", response);
   });
+  
+  // ===================================
+  // API Endpoint: GET /api/modbus-raw
+  // Zwraca surowe dane z rejestrów Modbus
+  // ===================================
+  server.on("/api/modbus-raw", HTTP_GET, [](AsyncWebServerRequest *request) {
+    StaticJsonDocument<1024> doc;
+    
+    doc["slaveID"] = config.modbusUnitID;
+    doc["connected"] = modbusConnected;
+    
+    JsonArray registers = doc.createNestedArray("registers");
+    for (int i = 0; i < 6; i++) {
+      JsonObject reg = registers.createNestedObject();
+      reg["index"] = i;
+      
+      char hexStr[8];
+      snprintf(hexStr, sizeof(hexStr), "0x%04X", modbusRawRegisters[i]);
+      reg["hex"] = hexStr;
+      
+      reg["decimal"] = modbusRawRegisters[i];
+      
+      // Dodaj opis dla konkretnych rejestrów
+      if (i == 0) {
+        reg["description"] = "Rejestr 0";
+      } else if (i == 1) {
+        reg["description"] = "Rejestr 1";
+      } else if (i == 2) {
+        reg["description"] = "Rejestr 2 (Temp*10)";
+      } else if (i == 3) {
+        reg["description"] = "Rejestr 3";
+      } else if (i == 4) {
+        reg["description"] = "Rejestr 4 (TempEXT*10)";
+      } else if (i == 5) {
+        reg["description"] = "Rejestr 5 (TempCO*10)";
+      }
+    }
+    
+    // Interpretacja temperatury z rejestru 2 (dla czujnika HT73/SHT35)
+    int16_t tempRaw = (int16_t)modbusRawRegisters[2];
+    doc["interpretedTemp"] = tempRaw / 10.0;
+    
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
+  
+  // ===================================
+  // API Endpoint: POST /api/modbus-test
+  // Testowy odczyt z niestandardowym Slave ID
+  // ===================================
+  server.on("/api/modbus-test", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      StaticJsonDocument<512> doc;
+      DeserializationError error = deserializeJson(doc, data, len);
+      
+      if (error) {
+        request->send(400, "text/plain", "Błąd parsowania JSON");
+        return;
+      }
+      
+      // Odczyt parametrów
+      uint8_t slaveID = doc["slaveID"] | 5;
+      uint16_t startRegister = doc["startRegister"] | 0;
+      uint16_t count = doc["count"] | 5;
+      
+      // Walidacja
+      if (slaveID < 1 || slaveID > 247 || count < 1 || count > 125) {
+        request->send(400, "text/plain", "Nieprawidłowe parametry");
+        return;
+      }
+      
+      // Wykonaj odczyt
+      bool success = readModbusRawData(slaveID, startRegister, count);
+      
+      // Przygotuj odpowiedź
+      StaticJsonDocument<1024> response;
+      response["slaveID"] = slaveID;
+      response["connected"] = success;
+      
+      JsonArray registers = response.createNestedArray("registers");
+      for (int i = 0; i < count && i < 6; i++) {
+        JsonObject reg = registers.createNestedObject();
+        reg["index"] = startRegister + i;
+        
+        char hexStr[8];
+        snprintf(hexStr, sizeof(hexStr), "0x%04X", modbusRawRegisters[i]);
+        reg["hex"] = hexStr;
+        
+        reg["decimal"] = modbusRawRegisters[i];
+        
+        // Dodaj opis
+        if (startRegister + i == 2) {
+          reg["description"] = "Rejestr 2 (Temp*10)";
+        } else {
+          char desc[32];
+          snprintf(desc, sizeof(desc), "Rejestr %d", startRegister + i);
+          reg["description"] = desc;
+        }
+      }
+      
+      // Interpretacja temperatury z rejestru 2
+      if (startRegister <= 2 && (startRegister + count) > 2) {
+        int regIndex = 2 - startRegister;
+        int16_t tempRaw = (int16_t)modbusRawRegisters[regIndex];
+        response["interpretedTemp"] = tempRaw / 10.0;
+      } else {
+        response["interpretedTemp"] = nullptr;
+      }
+      
+      String responseStr;
+      serializeJson(response, responseStr);
+      request->send(200, "application/json", responseStr);
+    }
+  );
   
   // ===================================
   // API Endpoint: POST /api/reset
