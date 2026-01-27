@@ -92,14 +92,15 @@ bool readModbusData() {
       Serial.printf("[Modbus] Odczyt OK - TempCO: %.1f°C, TempEXT: %.1f°C, Siłownik: %d%%\n", 
                     tempCO, tempEXT, actuatorPos);
       
-      // Szczegółowe logowanie surowych danych
+      // DEBUG: Wyświetl surowe wartości
       Serial.println("[Modbus] === RAW DATA ===");
       for (int i = 0; i < 6; i++) {
-        Serial.printf("  Reg[%d]: 0x%04X (%d) | int16: %d\n", 
+        Serial.printf("  Reg[%d]: 0x%04X (%5d) | int16: %6d | float: %6.1f\n", 
           i, 
           modbusRawRegisters[i], 
           modbusRawRegisters[i],
-          (int16_t)modbusRawRegisters[i]
+          (int16_t)modbusRawRegisters[i],
+          ((int16_t)modbusRawRegisters[i]) / 10.0
         );
       }
       Serial.println("[Modbus] ================");

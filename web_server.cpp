@@ -772,24 +772,6 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
     
     <main>
       <div class="grid">
-        <!-- Panel sterowania testem -->
-        <div class="card">
-          <h2>🔧 Test komunikacji Modbus</h2>
-          <div class="form-group">
-            <label>Slave ID:</label>
-            <input type="number" id="testSlaveID" min="1" max="247" value="5">
-          </div>
-          <div class="form-group">
-            <label>Rejestr startowy:</label>
-            <input type="number" id="testStartReg" min="0" max="65535" value="0">
-          </div>
-          <div class="form-group">
-            <label>Liczba rejestrów:</label>
-            <input type="number" id="testCount" min="1" max="10" value="5">
-          </div>
-          <button onclick="testModbus()">🚀 Wykonaj test</button>
-        </div>
-
         <!-- Status połączenia -->
         <div class="card">
           <h2>📊 Status połączenia</h2>
@@ -809,10 +791,18 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
 
         <!-- Interpretacja dla czujnika HT73/SHT35 -->
         <div class="card">
-          <h2>🌡️ Odczyt temperatury (HT73/SHT35)</h2>
+          <h2>🌡️ Temperatura (HT73/SHT35)</h2>
           <div class="temp-display" id="sensorTemp">--</div>
           <p style="text-align: center; color: #666;">
-            Temperatura z rejestru 2 (wartość/10)
+            Z rejestru 2 (wartość/10)
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>💧 Wilgotność (HT73/SHT35)</h2>
+          <div class="temp-display" id="sensorHumidity">--</div>
+          <p style="text-align: center; color: #666;">
+            Z rejestru 3 (wartość/10)
           </p>
         </div>
       </div>
@@ -881,38 +871,21 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       }
     }
     
-    async function testModbus() {
-      const slaveID = document.getElementById('testSlaveID').value;
-      const startReg = document.getElementById('testStartReg').value;
-      const count = document.getElementById('testCount').value;
-      
-      addLog(`Wysyłanie testu Modbus: Slave=${slaveID}, Start=${startReg}, Count=${count}`);
-      
+    async function refreshData() {
       try {
-        const response = await fetch('/api/modbus-test', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            slaveID: parseInt(slaveID),
-            startRegister: parseInt(startReg),
-            count: parseInt(count)
-          })
-        });
-        
+        const response = await fetch('/api/modbus-raw');
         const data = await response.json();
-        addLog(`Odczyt ${data.connected ? 'SUKCES' : 'BŁĄD'}`);
-        if (data.error) {
-          addLog(`⚠️ ${data.error}`);
-        }
+        
+        addLog(`Odczyt danych: Slave=${data.slaveID}, Status=${data.connected ? 'OK' : 'BŁĄD'}`);
         updateDisplay(data);
       } catch (error) {
-        addLog(`Błąd: ${error.message}`);
+        addLog(`Błąd odczytu: ${error.message}`);
       }
     }
     
     function updateDisplay(data) {
       document.getElementById('currentSlaveID').textContent = data.slaveID || '--';
-      document.getElementById('modbusStatus').textContent = data.connected ? 'Połączony' : 'Błąd';
+      document.getElementById('modbusStatus').textContent = data.connected ? '✅ Połączony' : '❌ Rozłączony';
       document.getElementById('modbusStatus').className = data.connected ? 'badge status-connected' : 'badge status-disconnected';
       document.getElementById('lastRead').textContent = new Date().toLocaleTimeString();
       
@@ -923,44 +896,46 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       if (data.registers && data.registers.length > 0) {
         data.registers.forEach(reg => {
           const row = tbody.insertRow();
-          const binary = reg.decimal.toString(2).padStart(16, '0');
-          const int16 = reg.decimal > 32767 ? reg.decimal - 65536 : reg.decimal;
-          const float = (int16 / 10.0).toFixed(1);
-          
           row.innerHTML = `
-            <td><strong>${reg.index}</strong></td>
-            <td style="font-family: monospace;">${reg.hex}</td>
+            <td>${reg.index}</td>
+            <td style="font-family: monospace; color: #667eea;">${reg.hex}</td>
             <td>${reg.decimal}</td>
-            <td style="font-family: monospace; font-size: 0.8em;">${binary}</td>
-            <td>${int16}</td>
-            <td>${float}</td>
-            <td>${reg.description || ''}</td>
+            <td style="font-family: monospace; font-size: 0.85em;">${reg.binary || '--'}</td>
+            <td>${reg.int16 !== undefined ? reg.int16 : '--'}</td>
+            <td>${reg.float !== undefined ? reg.float.toFixed(1) : '--'}</td>
+            <td style="color: #666;">${reg.description || ''}</td>
           `;
         });
       } else {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Brak danych</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Brak danych...</td></tr>';
       }
       
       // Temperatura
-      if (data.interpretedTemp !== undefined && data.interpretedTemp !== null && !isNaN(data.interpretedTemp)) {
+      if (data.interpretedTemp !== undefined && data.interpretedTemp !== 0) {
         document.getElementById('sensorTemp').textContent = data.interpretedTemp.toFixed(1) + '°C';
-        addLog(`Temperatura odczytana: ${data.interpretedTemp.toFixed(1)}°C`);
+        addLog(`🌡️ Temperatura: ${data.interpretedTemp.toFixed(1)}°C`);
       } else {
         document.getElementById('sensorTemp').textContent = '--';
+      }
+      
+      // Wilgotność (jeśli dostępna)
+      if (data.interpretedHumidity !== undefined && data.interpretedHumidity !== 0) {
+        document.getElementById('sensorHumidity').textContent = data.interpretedHumidity.toFixed(1) + '%';
+        addLog(`💧 Wilgotność: ${data.interpretedHumidity.toFixed(1)}%`);
       }
     }
     
     // Auto-refresh co 5 sekund
     autoRefreshInterval = setInterval(() => {
       if (autoRefreshEnabled) {
-        testModbus();
+        refreshData();
       }
     }, 5000);
     
     // Pierwszy odczyt po załadowaniu
     window.onload = () => {
       addLog('Strona diagnostyki załadowana');
-      setTimeout(testModbus, 500);
+      setTimeout(refreshData, 500);
     };
   </script>
 </body>
@@ -1264,6 +1239,7 @@ void setupWebServer() {
     
     doc["slaveID"] = config.modbusUnitID;
     doc["connected"] = modbusConnected;
+    doc["lastUpdate"] = millis();
     
     JsonArray registers = doc.createNestedArray("registers");
     for (int i = 0; i < 6; i++) {
@@ -1276,7 +1252,23 @@ void setupWebServer() {
       
       reg["decimal"] = modbusRawRegisters[i];
       
-      // Dodaj opis dla konkretnych rejestrów
+      // Binary representation (manual conversion)
+      char binStr[20];
+      uint16_t val = modbusRawRegisters[i];
+      binStr[16] = '\0';
+      for (int bit = 15; bit >= 0; bit--) {
+        binStr[15 - bit] = (val & (1 << bit)) ? '1' : '0';
+      }
+      reg["binary"] = binStr;
+      
+      // Int16 (signed)
+      int16_t int16Val = (int16_t)modbusRawRegisters[i];
+      reg["int16"] = int16Val;
+      
+      // Float (divided by 10)
+      reg["float"] = int16Val / 10.0;
+      
+      // Opis
       if (i == 0) {
         reg["description"] = "Rejestr 0";
       } else if (i == 1) {
@@ -1286,9 +1278,9 @@ void setupWebServer() {
       } else if (i == 3) {
         reg["description"] = "Rejestr 3";
       } else if (i == 4) {
-        reg["description"] = "Rejestr 4 (TempEXT*10)";
+        reg["description"] = "Rejestr 4";
       } else if (i == 5) {
-        reg["description"] = "Rejestr 5 (TempCO*10)";
+        reg["description"] = "Rejestr 5";
       }
     }
     
@@ -1296,83 +1288,14 @@ void setupWebServer() {
     int16_t tempRaw = (int16_t)modbusRawRegisters[2];
     doc["interpretedTemp"] = tempRaw / 10.0;
     
+    // Wilgotność z rejestru 3 (jeśli dostępna)
+    int16_t humRaw = (int16_t)modbusRawRegisters[3];
+    doc["interpretedHumidity"] = humRaw / 10.0;
+    
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
   });
-  
-  // ===================================
-  // API Endpoint: POST /api/modbus-test
-  // Testowy odczyt z niestandardowym Slave ID
-  // ===================================
-  server.on("/api/modbus-test", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,
-    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-      StaticJsonDocument<512> doc;
-      DeserializationError error = deserializeJson(doc, data, len);
-      
-      if (error) {
-        request->send(400, "text/plain", "Błąd parsowania JSON");
-        return;
-      }
-      
-      // Odczyt parametrów
-      uint8_t slaveID = doc["slaveID"] | 5;
-      uint16_t startRegister = doc["startRegister"] | 0;
-      uint16_t count = doc["count"] | 5;
-      
-      // Walidacja
-      if (slaveID < 1 || slaveID > 247 || count < 1 || count > 125) {
-        request->send(400, "text/plain", "Nieprawidłowe parametry");
-        return;
-      }
-      
-      // Wykonaj odczyt
-      bool success = readModbusRawData(slaveID, startRegister, count);
-      
-      // Przygotuj odpowiedź
-      StaticJsonDocument<1024> response;
-      response["slaveID"] = slaveID;
-      response["connected"] = success;
-      
-      if (!success) {
-        response["error"] = "Nie udało się odczytać danych z urządzenia Modbus. Sprawdź połączenie i parametry.";
-      }
-      
-      JsonArray registers = response.createNestedArray("registers");
-      if (success) {
-        for (int i = 0; i < count && i < 6; i++) {
-          JsonObject reg = registers.createNestedObject();
-          reg["index"] = startRegister + i;
-          
-          char hexStr[8];
-          snprintf(hexStr, sizeof(hexStr), "0x%04X", modbusRawRegisters[i]);
-          reg["hex"] = hexStr;
-          
-          reg["decimal"] = modbusRawRegisters[i];
-          
-          // Dodaj opis
-          if (startRegister + i == 2) {
-            reg["description"] = "Rejestr 2 (Temp*10)";
-          } else {
-            char desc[32];
-            snprintf(desc, sizeof(desc), "Rejestr %d", startRegister + i);
-            reg["description"] = desc;
-          }
-        }
-        
-        // Interpretacja temperatury z rejestru 2
-        if (startRegister <= 2 && (startRegister + count) > 2) {
-          int regIndex = 2 - startRegister;
-          int16_t tempRaw = (int16_t)modbusRawRegisters[regIndex];
-          response["interpretedTemp"] = tempRaw / 10.0;
-        }
-      }
-      
-      String responseStr;
-      serializeJson(response, responseStr);
-      request->send(200, "application/json", responseStr);
-    }
-  );
   
   // ===================================
   // API Endpoint: POST /api/reset
