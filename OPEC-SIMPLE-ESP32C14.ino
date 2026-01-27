@@ -29,13 +29,6 @@
 #include "web_server.h"
 
 // ===================================
-// Wersja firmware
-// ===================================
-#define FIRMWARE_VERSION "1.1.0"
-#define BUILD_DATE __DATE__
-#define BUILD_TIME __TIME__
-
-// ===================================
 // Obiekt Preferences (zapis konfiguracji)
 // ===================================
 Preferences preferences;
