@@ -1153,11 +1153,15 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
         const mappings = ['HT73 (Reg0=Wilg, Reg1=Temp)', 'HT73v2 (Reg1=Temp, Reg2=Wilg)', 'PLC', 'Custom'];
         const dividers = ['Brak', '÷10', '÷100'];
         
-        document.getElementById('diagRegType').textContent = regTypes[config.modbusUseInputRegisters ? 1 : 0];
+        const regTypeIdx = config.modbusUseInputRegisters ? 1 : 0;
+        const mappingIdx = (config.modbusDataMapping >= 0 && config.modbusDataMapping <= 3) ? config.modbusDataMapping : 0;
+        const dividerIdx = (config.modbusDivider >= 0 && config.modbusDivider <= 2) ? config.modbusDivider : 1;
+        
+        document.getElementById('diagRegType').textContent = regTypes[regTypeIdx];
         document.getElementById('diagStartReg').textContent = config.modbusStartRegister || 0;
         document.getElementById('diagRegCount').textContent = config.modbusRegisterCount || 2;
-        document.getElementById('diagMapping').textContent = mappings[config.modbusDataMapping || 0];
-        document.getElementById('diagDivider').textContent = dividers[config.modbusDivider || 1];
+        document.getElementById('diagMapping').textContent = mappings[mappingIdx];
+        document.getElementById('diagDivider').textContent = dividers[dividerIdx];
       } catch (error) {
         console.error('Błąd ładowania konfiguracji:', error);
       }
@@ -1448,16 +1452,20 @@ void setupWebServer() {
       
       // ===== NOWE pola - zaawansowane =====
       if (doc.containsKey("modbusStartRegister")) {
-        config.modbusStartRegister = doc["modbusStartRegister"];
+        uint16_t val = doc["modbusStartRegister"];
+        config.modbusStartRegister = (val <= 10) ? val : 0;
       }
       if (doc.containsKey("modbusRegisterCount")) {
-        config.modbusRegisterCount = doc["modbusRegisterCount"];
+        uint16_t val = doc["modbusRegisterCount"];
+        config.modbusRegisterCount = (val >= 1 && val <= 10) ? val : 2;
       }
       if (doc.containsKey("modbusDataMapping")) {
-        config.modbusDataMapping = doc["modbusDataMapping"];
+        uint8_t val = doc["modbusDataMapping"];
+        config.modbusDataMapping = (val <= 3) ? val : 0;
       }
       if (doc.containsKey("modbusDivider")) {
-        config.modbusDivider = doc["modbusDivider"];
+        uint8_t val = doc["modbusDivider"];
+        config.modbusDivider = (val <= 2) ? val : 1;
       }
       
       saveConfig();
@@ -1636,13 +1644,16 @@ void setupWebServer() {
           regs.add(modbus.getResponseBuffer(i));
         }
       }
+      
+      String response;
+      serializeJson(doc, response);
+      request->send(200, "application/json", response);
     } else {
       doc["error"] = "Brak parametru fc";
+      String response;
+      serializeJson(doc, response);
+      request->send(400, "application/json", response);
     }
-    
-    String response;
-    serializeJson(doc, response);
-    request->send(200, "application/json", response);
   });
   
   // Uruchomienie serwera

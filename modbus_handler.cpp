@@ -191,6 +191,7 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) 
 // Używa konfiguracji:
 //   - modbusDataMapping: 0=HT73, 1=HT73v2, 2=PLC, 3=Custom
 //   - modbusDivider: 0=brak, 1=÷10, 2=÷100
+// UWAGA: modbusRawRegisters[0] zawiera wartość z rejestru config.modbusStartRegister
 // ===================================
 void processModbusData() {
   float divider = 1.0;
@@ -204,8 +205,9 @@ void processModbusData() {
   }
   
   // Mapowanie danych według konfiguracji
+  // UWAGA: Indeksy są względne - modbusRawRegisters[0] = pierwszy odczytany rejestr
   switch (config.modbusDataMapping) {
-    case 0: // HT73: Reg0=Wilgotność, Reg1=Temperatura
+    case 0: // HT73: Reg0=Wilgotność, Reg1=Temperatura (względem startRegister)
       if (config.modbusRegisterCount >= 2) {
         humidity = (int16_t)modbusRawRegisters[0] / divider;
         tempEXT = (int16_t)modbusRawRegisters[1] / divider;
@@ -214,7 +216,7 @@ void processModbusData() {
       actuatorPos = 0;
       break;
       
-    case 1: // HT73v2: Reg1=Temperatura, Reg2=Wilgotność
+    case 1: // HT73v2: Reg1=Temperatura, Reg2=Wilgotność (względem startRegister)
       if (config.modbusRegisterCount >= 3) {
         tempEXT = (int16_t)modbusRawRegisters[1] / divider;
         humidity = (int16_t)modbusRawRegisters[2] / divider;
@@ -223,8 +225,9 @@ void processModbusData() {
       actuatorPos = 0;
       break;
       
-    case 2: // PLC: Reg0=Siłownik, Reg4=TempEXT, Reg5=TempCO
-      if (config.modbusRegisterCount >= 6) {
+    case 2: // PLC: Reg0=Siłownik, Reg4=TempEXT, Reg5=TempCO (względem startRegister)
+      // Dla PLC zakładamy że startRegister=0 i odczytujemy min 6 rejestrów
+      if (config.modbusRegisterCount >= 6 && config.modbusStartRegister == 0) {
         actuatorPos = modbusRawRegisters[0];
         tempEXT = (int16_t)modbusRawRegisters[4] / divider;
         tempCO = (int16_t)modbusRawRegisters[5] / divider;
@@ -233,7 +236,7 @@ void processModbusData() {
       break;
       
     case 3: // Custom - użytkownik sam interpretuje na podstawie surowych danych
-      // Domyślnie: Reg0=TempEXT, Reg1=Humidity
+      // Domyślnie: Reg0=TempEXT, Reg1=Humidity (względem startRegister)
       if (config.modbusRegisterCount >= 1) {
         tempEXT = (int16_t)modbusRawRegisters[0] / divider;
       }
