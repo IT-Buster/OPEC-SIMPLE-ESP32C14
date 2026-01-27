@@ -1252,9 +1252,13 @@ void setupWebServer() {
       
       reg["decimal"] = modbusRawRegisters[i];
       
-      // Binary representation
+      // Binary representation (manual conversion)
       char binStr[20];
-      snprintf(binStr, sizeof(binStr), "%016b", modbusRawRegisters[i]);
+      uint16_t val = modbusRawRegisters[i];
+      binStr[16] = '\0';
+      for (int bit = 15; bit >= 0; bit--) {
+        binStr[15 - bit] = (val & (1 << bit)) ? '1' : '0';
+      }
       reg["binary"] = binStr;
       
       // Int16 (signed)
