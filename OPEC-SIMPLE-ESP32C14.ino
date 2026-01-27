@@ -60,7 +60,19 @@ void loadConfig() {
     config.modbusBaudrate = preferences.getUInt("modbusBaudrate", MODBUS_BAUDRATE);
     config.hysteresis = preferences.getFloat("hysteresis", DEFAULT_HYSTERESIS);
     config.thermostatActive = preferences.getBool("thermostatActive", DEFAULT_THERMOSTAT_ACTIVE);
-    config.modbusUseInputRegisters = preferences.getBool("modbusUseInputReg", true); // Domyślnie true dla HT73
+    config.modbusUseInputRegisters = preferences.getBool("modbusUseInputReg", false); // Domyślnie false (Holding Registers)
+    
+    // ===== Wczytaj nowe pola zaawansowane =====
+    config.modbusStartRegister = preferences.getUShort("modbusStartReg", 0);
+    config.modbusRegisterCount = preferences.getUShort("modbusRegCount", 2);
+    config.modbusDataMapping = preferences.getUChar("modbusMapping", 0);
+    config.modbusDivider = preferences.getUChar("modbusDivider", 1);
+    
+    // ===== Walidacja nowych pól =====
+    if (config.modbusStartRegister > 10) config.modbusStartRegister = 0;
+    if (config.modbusRegisterCount < 1 || config.modbusRegisterCount > 10) config.modbusRegisterCount = 2;
+    if (config.modbusDataMapping > 3) config.modbusDataMapping = 0;
+    if (config.modbusDivider > 2) config.modbusDivider = 1;
     
     // Wczytaj krzywą grzewczą
     for (int i = 0; i < HEATING_CURVE_POINTS; i++) {
@@ -97,6 +109,12 @@ void saveConfig() {
   preferences.putBool("thermostatActive", config.thermostatActive);
   preferences.putBool("modbusUseInputReg", config.modbusUseInputRegisters);
   
+  // ===== Zapisz nowe pola zaawansowane =====
+  preferences.putUShort("modbusStartReg", config.modbusStartRegister);
+  preferences.putUShort("modbusRegCount", config.modbusRegisterCount);
+  preferences.putUChar("modbusMapping", config.modbusDataMapping);
+  preferences.putUChar("modbusDivider", config.modbusDivider);
+  
   // Zapisz krzywą grzewczą
   for (int i = 0; i < HEATING_CURVE_POINTS; i++) {
     char key[16];
@@ -121,7 +139,14 @@ void resetConfig() {
   config.modbusBaudrate = MODBUS_BAUDRATE;
   config.hysteresis = DEFAULT_HYSTERESIS;
   config.thermostatActive = DEFAULT_THERMOSTAT_ACTIVE;
-  config.modbusUseInputRegisters = true; // Domyślnie true dla HT73
+  
+  // ===== NOWE - Domyślne wartości zaawansowane =====
+  config.modbusUseInputRegisters = false;  // Domyślnie Holding Registers (FC03)
+  config.modbusStartRegister = 0;          // Start od rejestru 0
+  config.modbusRegisterCount = 2;          // Odczyt 2 rejestrów
+  config.modbusDataMapping = 0;            // HT73: Reg0=Wilg, Reg1=Temp
+  config.modbusDivider = 1;                // Dziel przez 10
+  
   config.configInitialized = false;
   
   // Skopiuj domyślną krzywą grzewczą

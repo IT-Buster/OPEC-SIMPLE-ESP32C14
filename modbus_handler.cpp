@@ -15,7 +15,7 @@ float tempCO = 0.0;
 float tempEXT = 0.0;
 float humidity = 0.0;
 uint16_t actuatorPos = 0;
-uint16_t modbusRawRegisters[6] = {0, 0, 0, 0, 0, 0};
+uint16_t modbusRawRegisters[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // Zwiększono z 6 do 10
 
 // ===================================
 // Inicjalizacja Modbus RTU
@@ -57,16 +57,12 @@ void postTransmission() {
 
 // ===================================
 // Odczyt danych z czujnika HT73 przez Modbus
-// Rejestry Holding Registers (0x03) dla HT73:
-//   0: Wilgotność (int16, /10)
-//   1: Temperatura (int16, /10)
-// Rejestry Input Registers (0x04) dla starszej konfiguracji:
-//   2: Temperatura (int16, /10)
-//   3: Wilgotność (int16, /10)
-// Rejestry Holding Registers (0x03) dla PLC:
-//   0: Pozycja siłownika (uint16, 0-100)
-//   4: Temperatura zewnętrzna (int16, /10)
-//   5: Temperatura CO (int16, /10)
+// Używa konfiguracji z config:
+//   - modbusUseInputRegisters: true=FC04, false=FC03
+//   - modbusStartRegister: adres startowy (0-10)
+//   - modbusRegisterCount: liczba rejestrów (1-10)
+//   - modbusDataMapping: sposób interpretacji danych
+//   - modbusDivider: dzielnik wartości
 // ===================================
 bool readModbusData() {
   uint8_t result;
@@ -74,71 +70,34 @@ bool readModbusData() {
   
   // Retry logic - maksymalnie 3 próby
   while (retries < MODBUS_RETRY_COUNT) {
+    // Wybór typu odczytu na podstawie konfiguracji
     if (config.modbusUseInputRegisters) {
-      // Tryb czujnika HT73 - Holding Registers 0-1 (nowa konfiguracja)
-      result = modbus.readHoldingRegisters(0, 2); // Odczyt rejestrów 0-1 (wilgotność + temp)
+      result = modbus.readInputRegisters(config.modbusStartRegister, config.modbusRegisterCount);
     } else {
-      // Tryb PLC - Holding Registers
-      result = modbus.readHoldingRegisters(0, 6); // Odczyt rejestrów 0-5
+      result = modbus.readHoldingRegisters(config.modbusStartRegister, config.modbusRegisterCount);
     }
     
     if (result == modbus.ku8MBSuccess) {
-      if (config.modbusUseInputRegisters) {
-        // Pomyślnie odczytano dane z HT73
-        // Wyczyść tablicę przed zapisem nowych danych
-        for (int i = 0; i < 6; i++) {
-          modbusRawRegisters[i] = 0;
-        }
-        
-        // Zapisz surowe wartości do tablicy
-        modbusRawRegisters[0] = modbus.getResponseBuffer(0); // Rejestr 0: Wilgotność
-        modbusRawRegisters[1] = modbus.getResponseBuffer(1); // Rejestr 1: Temperatura
-        
-        // Rejestr 0: Wilgotność × 10
-        int16_t humRaw = (int16_t)modbusRawRegisters[0];
-        float humidityValue = humRaw / 10.0;
-        
-        // Rejestr 1: Temperatura × 10
-        int16_t tempRaw = (int16_t)modbusRawRegisters[1];
-        float temperature = tempRaw / 10.0;
-        
-        // Dla kompatybilności z resztą systemu - zapisz temperaturę jako tempEXT
-        tempEXT = temperature;
-        humidity = humidityValue;
-        
-        // Wyzeruj pozostałe (dla kompatybilności)
-        tempCO = 0.0;
-        actuatorPos = 0;
-        
-        modbusConnected = true;
-        
-        // UWAGA: Brak logów Serial - Serial zajęty przez RS485!
-      } else {
-        // Pomyślnie odczytano dane z PLC
-        // Zapisz surowe wartości do tablicy
-        for (int i = 0; i < 6; i++) {
-          modbusRawRegisters[i] = modbus.getResponseBuffer(i);
-        }
-        
-        actuatorPos = modbusRawRegisters[0];
-        
-        // Rejestry 4 i 5 zawierają temperatury jako int16 (dzielone przez 10)
-        int16_t tempExtRaw = (int16_t)modbusRawRegisters[4];
-        int16_t tempCORaw = (int16_t)modbusRawRegisters[5];
-        
-        tempEXT = tempExtRaw / 10.0;
-        tempCO = tempCORaw / 10.0;
-        
-        modbusConnected = true;
+      // Zapisz surowe wartości
+      for (int i = 0; i < config.modbusRegisterCount && i < 10; i++) {
+        modbusRawRegisters[i] = modbus.getResponseBuffer(i);
       }
       
-      return true;
-    } else {
-      // Błąd odczytu
-      retries++;
-      if (retries < MODBUS_RETRY_COUNT) {
-        delay(MODBUS_RETRY_DELAY);
+      // Wyczyść pozostałe rejestry
+      for (int i = config.modbusRegisterCount; i < 10; i++) {
+        modbusRawRegisters[i] = 0;
       }
+      
+      // Przetwarzanie według mapowania
+      processModbusData();
+      
+      modbusConnected = true;
+      return true;
+    }
+    
+    retries++;
+    if (retries < MODBUS_RETRY_COUNT) {
+      delay(MODBUS_RETRY_DELAY);
     }
   }
   
@@ -225,4 +184,103 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count) 
   }
   
   return success;
+}
+
+// ===================================
+// Przetwarzanie danych według mapowania
+// Używa konfiguracji:
+//   - modbusDataMapping: 0=HT73, 1=HT73v2, 2=PLC, 3=Custom
+//   - modbusDivider: 0=brak, 1=÷10, 2=÷100
+// ===================================
+void processModbusData() {
+  float divider = 1.0;
+  
+  // Wybór dzielnika
+  switch (config.modbusDivider) {
+    case 0: divider = 1.0; break;    // Brak
+    case 1: divider = 10.0; break;   // ÷10
+    case 2: divider = 100.0; break;  // ÷100
+    default: divider = 10.0; break;
+  }
+  
+  // Mapowanie danych według konfiguracji
+  switch (config.modbusDataMapping) {
+    case 0: // HT73: Reg0=Wilgotność, Reg1=Temperatura
+      if (config.modbusRegisterCount >= 2) {
+        humidity = (int16_t)modbusRawRegisters[0] / divider;
+        tempEXT = (int16_t)modbusRawRegisters[1] / divider;
+      }
+      tempCO = 0.0;
+      actuatorPos = 0;
+      break;
+      
+    case 1: // HT73v2: Reg1=Temperatura, Reg2=Wilgotność
+      if (config.modbusRegisterCount >= 3) {
+        tempEXT = (int16_t)modbusRawRegisters[1] / divider;
+        humidity = (int16_t)modbusRawRegisters[2] / divider;
+      }
+      tempCO = 0.0;
+      actuatorPos = 0;
+      break;
+      
+    case 2: // PLC: Reg0=Siłownik, Reg4=TempEXT, Reg5=TempCO
+      if (config.modbusRegisterCount >= 6) {
+        actuatorPos = modbusRawRegisters[0];
+        tempEXT = (int16_t)modbusRawRegisters[4] / divider;
+        tempCO = (int16_t)modbusRawRegisters[5] / divider;
+      }
+      humidity = 0.0;
+      break;
+      
+    case 3: // Custom - użytkownik sam interpretuje na podstawie surowych danych
+      // Domyślnie: Reg0=TempEXT, Reg1=Humidity
+      if (config.modbusRegisterCount >= 1) {
+        tempEXT = (int16_t)modbusRawRegisters[0] / divider;
+      }
+      if (config.modbusRegisterCount >= 2) {
+        humidity = (int16_t)modbusRawRegisters[1] / divider;
+      }
+      tempCO = 0.0;
+      actuatorPos = 0;
+      break;
+  }
+}
+
+// ===================================
+// Funkcja testowa - skanuje Slave ID od 1 do 10
+// Zwraca JSON z listą odnalezionych urządzeń
+// ===================================
+String scanModbusSlaves() {
+  String result = "{\"scanned\":[";
+  bool first = true;
+  
+  for (uint8_t slaveID = 1; slaveID <= 10; slaveID++) {
+    modbus.begin(slaveID, Serial);
+    
+    // Test FC03
+    uint8_t fc03_result = modbus.readHoldingRegisters(0, 1);
+    // Test FC04
+    uint8_t fc04_result = modbus.readInputRegisters(0, 1);
+    
+    if (fc03_result == modbus.ku8MBSuccess || fc04_result == modbus.ku8MBSuccess) {
+      if (!first) result += ",";
+      result += "{\"id\":";
+      result += slaveID;
+      result += ",\"fc03\":";
+      result += (fc03_result == modbus.ku8MBSuccess) ? "true" : "false";
+      result += ",\"fc04\":";
+      result += (fc04_result == modbus.ku8MBSuccess) ? "true" : "false";
+      result += "}";
+      first = false;
+    }
+    
+    delay(100);
+  }
+  
+  result += "]}";
+  
+  // Przywróć oryginalny Slave ID
+  modbus.begin(config.modbusUnitID, Serial);
+  
+  return result;
 }

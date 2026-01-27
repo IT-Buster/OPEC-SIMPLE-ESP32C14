@@ -2,6 +2,12 @@
 #define MODBUS_HANDLER_H
 
 #include <Arduino.h>
+#include <ModbusMaster.h>
+
+// ===================================
+// Obiekt Modbus (extern)
+// ===================================
+extern ModbusMaster modbus;
 
 // ===================================
 // Dane odczytane z PLC przez Modbus
@@ -11,7 +17,7 @@ extern float tempEXT;         // Temperatura zewnętrzna (°C) - z czujnika HT73
 extern float humidity;        // Wilgotność (%) - z czujnika HT73
 extern uint16_t actuatorPos;  // Pozycja siłownika (0-100)
 extern bool modbusConnected;  // Status połączenia Modbus
-extern uint16_t modbusRawRegisters[6];  // Surowe wartości rejestrów 0-5
+extern uint16_t modbusRawRegisters[10];  // Surowe wartości rejestrów 0-9 (zwiększono z 6 do 10)
 
 // ===================================
 // Funkcje obsługi Modbus
@@ -22,5 +28,7 @@ bool readModbusRawData(uint8_t slaveID, uint16_t startRegister, uint16_t count);
 bool writeActuatorPosition(uint16_t position);
 void preTransmission();   // Callback przed transmisją
 void postTransmission();  // Callback po transmisji
+void processModbusData(); // Przetwarzanie danych według mapowania
+String scanModbusSlaves(); // Skanowanie Slave ID 1-10
 
 #endif // MODBUS_HANDLER_H

@@ -440,6 +440,46 @@ const char settings_html[] PROGMEM = R"rawliteral(
     </div>
     
     <div class="card">
+      <h2>🔧 Konfiguracja Modbus - Zaawansowane</h2>
+      <div class="form-group">
+        <label>Typ rejestru:</label>
+        <select id="modbusRegType">
+          <option value="0">Holding Registers (FC 0x03)</option>
+          <option value="1">Input Registers (FC 0x04)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Adres startowy rejestru:</label>
+        <input type="number" id="modbusStartReg" min="0" max="10" value="0">
+      </div>
+      
+      <div class="form-group">
+        <label>Liczba rejestrów do odczytu:</label>
+        <input type="number" id="modbusRegCount" min="1" max="10" value="2">
+      </div>
+      
+      <div class="form-group">
+        <label>Mapowanie danych:</label>
+        <select id="modbusMapping">
+          <option value="0">HT73 (Reg0=Wilgotność, Reg1=Temperatura)</option>
+          <option value="1">HT73v2 (Reg1=Temperatura, Reg2=Wilgotność)</option>
+          <option value="2">PLC (Reg0=Siłownik, Reg4=TempEXT, Reg5=TempCO)</option>
+          <option value="3">Niestandardowe</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Dzielnik wartości:</label>
+        <select id="modbusDivider">
+          <option value="0">Brak (230 → 230)</option>
+          <option value="1">÷10 (230 → 23.0)</option>
+          <option value="2">÷100 (2300 → 23.0)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="card">
       <h2>🌡️ Ustawienia termostatu</h2>
       <div class="form-group">
         <label>Histereza (°C):</label>
@@ -468,6 +508,13 @@ const char settings_html[] PROGMEM = R"rawliteral(
           document.getElementById('modbusID').value = data.modbusUnitID || 5;
           document.getElementById('hysteresis').value = data.hysteresis || 2.0;
           document.getElementById('thermoActive').checked = data.thermostatActive !== false;
+          
+          // ===== NOWE - zaawansowane =====
+          document.getElementById('modbusRegType').value = data.modbusUseInputRegisters ? 1 : 0;
+          document.getElementById('modbusStartReg').value = data.modbusStartRegister || 0;
+          document.getElementById('modbusRegCount').value = data.modbusRegisterCount || 2;
+          document.getElementById('modbusMapping').value = data.modbusDataMapping || 0;
+          document.getElementById('modbusDivider').value = data.modbusDivider || 1;
         })
         .catch(err => console.error('Błąd wczytywania ustawień:', err));
     }
@@ -479,7 +526,14 @@ const char settings_html[] PROGMEM = R"rawliteral(
         modbusBaud: parseInt(document.getElementById('modbusBaud').value),
         modbusID: parseInt(document.getElementById('modbusID').value),
         hysteresis: parseFloat(document.getElementById('hysteresis').value),
-        thermoActive: document.getElementById('thermoActive').checked
+        thermoActive: document.getElementById('thermoActive').checked,
+        
+        // ===== NOWE - zaawansowane =====
+        modbusUseInputRegisters: document.getElementById('modbusRegType').value === '1',
+        modbusStartRegister: parseInt(document.getElementById('modbusStartReg').value),
+        modbusRegisterCount: parseInt(document.getElementById('modbusRegCount').value),
+        modbusDataMapping: parseInt(document.getElementById('modbusMapping').value),
+        modbusDivider: parseInt(document.getElementById('modbusDivider').value)
       };
       
       fetch('/api/settings', {
@@ -870,6 +924,49 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
         </div>
       </div>
 
+      <!-- Narzędzia testowe Modbus -->
+      <div class="card full-width">
+        <h2>🔬 Narzędzia testowe Modbus</h2>
+        
+        <div style="margin-bottom: 20px;">
+          <button onclick="scanSlaves()">🔍 Skanuj Slave ID (1-10)</button>
+          <button onclick="testFC03()">📖 Test FC03 (Holding)</button>
+          <button onclick="testFC04()">📖 Test FC04 (Input)</button>
+        </div>
+        
+        <div id="scanResults" style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; display: none;">
+          <h4>Wyniki skanowania:</h4>
+          <pre id="scanResultsText"></pre>
+        </div>
+      </div>
+
+      <!-- Informacje diagnostyczne -->
+      <div class="card full-width">
+        <h2>📊 Informacje diagnostyczne</h2>
+        <div class="grid">
+          <div class="status-row">
+            <span>Typ odczytu:</span>
+            <span id="diagRegType">-</span>
+          </div>
+          <div class="status-row">
+            <span>Adres startowy:</span>
+            <span id="diagStartReg">-</span>
+          </div>
+          <div class="status-row">
+            <span>Liczba rejestrów:</span>
+            <span id="diagRegCount">-</span>
+          </div>
+          <div class="status-row">
+            <span>Mapowanie:</span>
+            <span id="diagMapping">-</span>
+          </div>
+          <div class="status-row">
+            <span>Dzielnik:</span>
+            <span id="diagDivider">-</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Tabela surowych rejestrów -->
       <div class="card full-width">
         <h2>📋 Surowe wartości rejestrów</h2>
@@ -879,9 +976,9 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
               <th>Rejestr</th>
               <th>HEX</th>
               <th>Decimal</th>
-              <th>Binary</th>
               <th>Int16</th>
               <th>Float (/10)</th>
+              <th>Float (/100)</th>
               <th>Opis</th>
             </tr>
           </thead>
@@ -952,31 +1049,36 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       document.getElementById('modbusStatus').className = data.connected ? 'badge status-connected' : 'badge status-disconnected';
       document.getElementById('lastRead').textContent = new Date().toLocaleTimeString();
       
-      // Wypełnij tabelę rejestrów
+      // Wypełnij tabelę rejestrów (10 rejestrów)
       const tbody = document.getElementById('registersTable');
       tbody.innerHTML = '';
       
-      if (data.registers && data.registers.length > 0) {
-        data.registers.forEach(reg => {
-          const row = tbody.insertRow();
+      for (let i = 0; i < 10; i++) {
+        const reg = data.registers && data.registers[i];
+        const row = tbody.insertRow();
+        
+        if (reg) {
           row.innerHTML = `
             <td>${reg.index}</td>
             <td style="font-family: monospace; color: #667eea;">${reg.hex}</td>
             <td>${reg.decimal}</td>
-            <td style="font-family: monospace; font-size: 0.85em;">${reg.binary || '--'}</td>
             <td>${reg.int16 !== undefined ? reg.int16 : '--'}</td>
-            <td>${reg.float !== undefined ? reg.float.toFixed(1) : '--'}</td>
-            <td style="color: #666;">${reg.description || ''}</td>
+            <td>${reg.float !== undefined ? reg.float.toFixed(2) : '--'}</td>
+            <td>${reg.int16 !== undefined ? (reg.int16 / 100.0).toFixed(2) : '--'}</td>
+            <td style="color: #666; font-size: 0.85em;">${reg.description || '-'}</td>
           `;
-        });
-      } else {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">Brak danych...</td></tr>';
+        } else {
+          row.innerHTML = `
+            <td>${i}</td>
+            <td colspan="6" style="text-align: center; color: #999;">Brak danych</td>
+          `;
+        }
       }
       
       // Temperatura
-      if (data.interpretedTemp !== undefined && data.interpretedTemp !== 0) {
-        document.getElementById('sensorTemp').textContent = data.interpretedTemp.toFixed(1) + '°C';
-        addLog(`🌡️ Temperatura: ${data.interpretedTemp.toFixed(1)}°C`);
+      if (data.interpretedTempEXT !== undefined && data.interpretedTempEXT !== 0) {
+        document.getElementById('sensorTemp').textContent = data.interpretedTempEXT.toFixed(1) + '°C';
+        addLog(`🌡️ Temperatura: ${data.interpretedTempEXT.toFixed(1)}°C`);
       } else {
         document.getElementById('sensorTemp').textContent = '--';
       }
@@ -985,6 +1087,79 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
       if (data.interpretedHumidity !== undefined && data.interpretedHumidity !== 0) {
         document.getElementById('sensorHumidity').textContent = data.interpretedHumidity.toFixed(1) + '%';
         addLog(`💧 Wilgotność: ${data.interpretedHumidity.toFixed(1)}%`);
+      }
+    }
+    
+    // Funkcje testowe
+    async function scanSlaves() {
+      document.getElementById('scanResults').style.display = 'block';
+      document.getElementById('scanResultsText').textContent = 'Skanowanie w toku...';
+      addLog('🔍 Rozpoczęto skanowanie Slave ID 1-10...');
+      
+      try {
+        const response = await fetch('/api/modbus-scan');
+        const data = await response.json();
+        
+        let text = 'Znalezione urządzenia:\n\n';
+        if (data.scanned.length === 0) {
+          text += 'Brak odpowiedzi z żadnego Slave ID (1-10)\n';
+          addLog('❌ Nie znaleziono żadnych urządzeń');
+        } else {
+          data.scanned.forEach(device => {
+            text += `Slave ID ${device.id}:\n`;
+            text += `  - FC03 (Holding): ${device.fc03 ? '✅ OK' : '❌ Brak'}\n`;
+            text += `  - FC04 (Input):   ${device.fc04 ? '✅ OK' : '❌ Brak'}\n\n`;
+          });
+          addLog(`✅ Znaleziono ${data.scanned.length} urządzeń`);
+        }
+        document.getElementById('scanResultsText').textContent = text;
+      } catch (error) {
+        document.getElementById('scanResultsText').textContent = 'Błąd skanowania: ' + error;
+        addLog('❌ Błąd skanowania: ' + error.message);
+      }
+    }
+    
+    async function testFC03() {
+      addLog('🔬 Test FC03 (Holding Registers)...');
+      try {
+        const response = await fetch('/api/modbus-test?fc=3');
+        const data = await response.json();
+        alert('Test FC03:\n' + JSON.stringify(data, null, 2));
+        addLog(`📊 FC03: ${data.success ? '✅ OK' : '❌ BŁĄD'}`);
+      } catch (error) {
+        addLog('❌ Błąd testu FC03: ' + error.message);
+      }
+    }
+    
+    async function testFC04() {
+      addLog('🔬 Test FC04 (Input Registers)...');
+      try {
+        const response = await fetch('/api/modbus-test?fc=4');
+        const data = await response.json();
+        alert('Test FC04:\n' + JSON.stringify(data, null, 2));
+        addLog(`📊 FC04: ${data.success ? '✅ OK' : '❌ BŁĄD'}`);
+      } catch (error) {
+        addLog('❌ Błąd testu FC04: ' + error.message);
+      }
+    }
+    
+    // Aktualizuj informacje diagnostyczne
+    async function updateDiagnostics() {
+      try {
+        const response = await fetch('/api/settings');
+        const config = await response.json();
+        
+        const regTypes = ['Holding Registers (FC03)', 'Input Registers (FC04)'];
+        const mappings = ['HT73 (Reg0=Wilg, Reg1=Temp)', 'HT73v2 (Reg1=Temp, Reg2=Wilg)', 'PLC', 'Custom'];
+        const dividers = ['Brak', '÷10', '÷100'];
+        
+        document.getElementById('diagRegType').textContent = regTypes[config.modbusUseInputRegisters ? 1 : 0];
+        document.getElementById('diagStartReg').textContent = config.modbusStartRegister || 0;
+        document.getElementById('diagRegCount').textContent = config.modbusRegisterCount || 2;
+        document.getElementById('diagMapping').textContent = mappings[config.modbusDataMapping || 0];
+        document.getElementById('diagDivider').textContent = dividers[config.modbusDivider || 1];
+      } catch (error) {
+        console.error('Błąd ładowania konfiguracji:', error);
       }
     }
     
@@ -998,6 +1173,7 @@ const char diagnostics_html[] PROGMEM = R"rawliteral(
     // Pierwszy odczyt po załadowaniu
     window.onload = () => {
       addLog('Strona diagnostyki załadowana');
+      updateDiagnostics();
       setTimeout(refreshData, 500);
     };
   </script>
@@ -1270,6 +1446,20 @@ void setupWebServer() {
         config.modbusUseInputRegisters = doc["modbusUseInputRegisters"];
       }
       
+      // ===== NOWE pola - zaawansowane =====
+      if (doc.containsKey("modbusStartRegister")) {
+        config.modbusStartRegister = doc["modbusStartRegister"];
+      }
+      if (doc.containsKey("modbusRegisterCount")) {
+        config.modbusRegisterCount = doc["modbusRegisterCount"];
+      }
+      if (doc.containsKey("modbusDataMapping")) {
+        config.modbusDataMapping = doc["modbusDataMapping"];
+      }
+      if (doc.containsKey("modbusDivider")) {
+        config.modbusDivider = doc["modbusDivider"];
+      }
+      
       saveConfig();
       // Serial zajęty przez RS485 - brak logów
       
@@ -1310,6 +1500,12 @@ void setupWebServer() {
     doc["hysteresis"] = config.hysteresis;
     doc["thermostatActive"] = config.thermostatActive;
     
+    // ===== NOWE - zaawansowane pola =====
+    doc["modbusStartRegister"] = config.modbusStartRegister;
+    doc["modbusRegisterCount"] = config.modbusRegisterCount;
+    doc["modbusDataMapping"] = config.modbusDataMapping;
+    doc["modbusDivider"] = config.modbusDivider;
+    
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
@@ -1328,9 +1524,8 @@ void setupWebServer() {
     
     JsonArray registers = doc.createNestedArray("registers");
     
-    // Dla HT73 (modbusUseInputRegisters=true): tylko 2 rejestry (0-1)
-    // Dla PLC (modbusUseInputRegisters=false): 6 rejestrów (0-5)
-    int registerCount = config.modbusUseInputRegisters ? 2 : 6;
+    // Pokaż 10 rejestrów (zwiększono z 6)
+    int registerCount = 10;
     
     for (int i = 0; i < registerCount; i++) {
       JsonObject reg = registers.createNestedObject();
@@ -1342,15 +1537,6 @@ void setupWebServer() {
       
       reg["decimal"] = modbusRawRegisters[i];
       
-      // Binary representation (manual conversion)
-      char binStr[20];
-      uint16_t val = modbusRawRegisters[i];
-      binStr[16] = '\0';
-      for (int bit = 15; bit >= 0; bit--) {
-        binStr[15 - bit] = (val & (1 << bit)) ? '1' : '0';
-      }
-      reg["binary"] = binStr;
-      
       // Int16 (signed)
       int16_t int16Val = (int16_t)modbusRawRegisters[i];
       reg["int16"] = int16Val;
@@ -1359,47 +1545,36 @@ void setupWebServer() {
       reg["float"] = int16Val / 10.0;
       
       // Opis - zależny od trybu konfiguracji
-      if (config.modbusUseInputRegisters) {
-        // Tryb HT73 - rejestry 0-1
-        if (i == 0) {
-          reg["description"] = "Wilgotność × 10 (%)";
-        } else if (i == 1) {
-          reg["description"] = "Temperatura × 10 (°C)";
-        }
-      } else {
-        // Tryb PLC - rejestry 0-5
-        if (i == 0) {
-          reg["description"] = "Rejestr 0 (Pozycja siłownika PLC)";
-        } else if (i == 1) {
-          reg["description"] = "Rejestr 1 (PLC)";
-        } else if (i == 2) {
-          reg["description"] = "Rejestr 2 (PLC)";
-        } else if (i == 3) {
-          reg["description"] = "Rejestr 3 (PLC)";
-        } else if (i == 4) {
-          reg["description"] = "Rejestr 4 (Temperatura zewnętrzna PLC ×10)";
-        } else if (i == 5) {
-          reg["description"] = "Rejestr 5 (Temperatura CO PLC ×10)";
-        }
+      switch (config.modbusDataMapping) {
+        case 0: // HT73
+          if (i == 0) reg["description"] = "Wilgotność × 10 (%)";
+          else if (i == 1) reg["description"] = "Temperatura × 10 (°C)";
+          else reg["description"] = "-";
+          break;
+        case 1: // HT73v2
+          if (i == 1) reg["description"] = "Temperatura × 10 (°C)";
+          else if (i == 2) reg["description"] = "Wilgotność × 10 (%)";
+          else reg["description"] = "-";
+          break;
+        case 2: // PLC
+          if (i == 0) reg["description"] = "Pozycja siłownika";
+          else if (i == 4) reg["description"] = "Temperatura zewnętrzna × 10";
+          else if (i == 5) reg["description"] = "Temperatura CO × 10";
+          else reg["description"] = "-";
+          break;
+        case 3: // Custom
+          if (i == 0) reg["description"] = "Custom: TempEXT × 10";
+          else if (i == 1) reg["description"] = "Custom: Wilgotność × 10";
+          else reg["description"] = "-";
+          break;
       }
     }
     
     // Interpretacja danych
-    if (config.modbusUseInputRegisters) {
-      // HT73: Rejestr 0 = wilgotność, Rejestr 1 = temperatura
-      int16_t humRaw = (int16_t)modbusRawRegisters[0];
-      doc["interpretedHumidity"] = humRaw / 10.0;
-      
-      int16_t tempRaw = (int16_t)modbusRawRegisters[1];
-      doc["interpretedTemp"] = tempRaw / 10.0;
-    } else {
-      // PLC: Rejestr 4 = temp zewnętrzna, Rejestr 5 = temp CO
-      int16_t tempExtRaw = (int16_t)modbusRawRegisters[4];
-      doc["interpretedTemp"] = tempExtRaw / 10.0;
-      
-      int16_t tempCORaw = (int16_t)modbusRawRegisters[5];
-      doc["interpretedTempCO"] = tempCORaw / 10.0;
-    }
+    doc["interpretedTempEXT"] = tempEXT;
+    doc["interpretedHumidity"] = humidity;
+    doc["interpretedTempCO"] = tempCO;
+    doc["interpretedActuatorPos"] = actuatorPos;
     
     String response;
     serializeJson(doc, response);
@@ -1416,6 +1591,58 @@ void setupWebServer() {
     request->send(200, "text/plain", "Resetowanie... Urządzenie zostanie zrestartowane");
     delay(1000);
     ESP.restart();
+  });
+  
+  // ===================================
+  // API Endpoint: GET /api/modbus-scan
+  // Skanowanie Slave ID od 1 do 10
+  // ===================================
+  server.on("/api/modbus-scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String result = scanModbusSlaves();
+    request->send(200, "application/json", result);
+  });
+  
+  // ===================================
+  // API Endpoint: GET /api/modbus-test
+  // Test konkretnego Function Code (FC03 lub FC04)
+  // ===================================
+  server.on("/api/modbus-test", HTTP_GET, [](AsyncWebServerRequest *request) {
+    StaticJsonDocument<512> doc;
+    
+    if (request->hasParam("fc")) {
+      int fc = request->getParam("fc")->value().toInt();
+      uint8_t result;
+      
+      if (fc == 3) {
+        result = modbus.readHoldingRegisters(config.modbusStartRegister, config.modbusRegisterCount);
+        doc["type"] = "Holding Registers (FC03)";
+      } else if (fc == 4) {
+        result = modbus.readInputRegisters(config.modbusStartRegister, config.modbusRegisterCount);
+        doc["type"] = "Input Registers (FC04)";
+      } else {
+        doc["error"] = "Nieprawidłowy FC (użyj 3 lub 4)";
+        String response;
+        serializeJson(doc, response);
+        request->send(400, "application/json", response);
+        return;
+      }
+      
+      doc["success"] = (result == modbus.ku8MBSuccess);
+      doc["errorCode"] = result;
+      
+      if (result == modbus.ku8MBSuccess) {
+        JsonArray regs = doc.createNestedArray("registers");
+        for (int i = 0; i < config.modbusRegisterCount; i++) {
+          regs.add(modbus.getResponseBuffer(i));
+        }
+      }
+    } else {
+      doc["error"] = "Brak parametru fc";
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
   });
   
   // Uruchomienie serwera

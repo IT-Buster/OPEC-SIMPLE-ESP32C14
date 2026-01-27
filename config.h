@@ -89,7 +89,14 @@ struct Config {
   float hysteresis;
   bool thermostatActive;
   float heatingCurve[HEATING_CURVE_POINTS][2]; // [temp zewn., temp CO]
-  bool modbusUseInputRegisters; // true dla HT73, false dla PLC
+  
+  // ===== Konfiguracja zaawansowana Modbus =====
+  bool modbusUseInputRegisters;     // true=FC04, false=FC03
+  uint16_t modbusStartRegister;     // Adres startowy (0-10)
+  uint16_t modbusRegisterCount;     // Liczba rejestrów (1-10)
+  uint8_t modbusDataMapping;        // 0=HT73(Reg0=Wilg,Reg1=Temp), 1=HT73v2(Reg1=Temp,Reg2=Wilg), 2=PLC, 3=Custom
+  uint8_t modbusDivider;            // 0=brak, 1=÷10, 2=÷100
+  
   bool configInitialized; // Flaga pierwszego uruchomienia
 };
 
