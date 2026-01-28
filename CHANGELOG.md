@@ -37,7 +37,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/).
 ## [1.1.0] - 2026-01-27
 
 ### Zmieniono
-- Zmiana Serial2 → Serial (UART0) zgodnie z przykładem producenta ES32C14
+- Zmiana Serial2 → Serial (UART0) zgodnie z przykładem producenta ESP32C14
 - Powrót do Holding Registers (FC03) zamiast Input Registers (FC04)
 - Odczyt rejestrów 0-1 (wilgotność + temperatura)
 

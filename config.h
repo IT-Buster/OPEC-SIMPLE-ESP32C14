@@ -11,7 +11,7 @@
 //       - Dodano narzędzia diagnostyczne (skanowanie Slave ID, testy)
 //       - Dodano endpointy: /api/modbus-scan, /api/modbus-test
 //       - Rozszerzono /api/config o nowe pola
-// 1.1.0 - Zmiana Serial2 → Serial (UART0) zgodnie z ES32C14
+// 1.1.0 - Zmiana Serial2 → Serial (UART0) zgodnie z ESP32C14
 //       - Powrót do Holding Registers (FC03)
 //       - Wyłączenie Serial Monitor (RS485 zajmuje Serial)
 // 1.0.0 - Pierwsza wersja
