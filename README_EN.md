@@ -138,7 +138,7 @@ The **EletechSup ES32C14** board uses the following ESP32-C3 GPIO pins:
 - Use Web UI for monitoring: `http://opec-esp32.local`
 - GPIO1/GPIO3 pins are hardware-assigned to UART0 and cannot be changed
 
-📖 **Detailed documentation:** [MODBUS_PINS.md](MODBUS_PINS.md)
+📖 **Detailed documentation:** [MODBUS_PINS_EN.md](MODBUS_PINS_EN.md) | [Polish version](MODBUS_PINS.md)
 
 ---
 

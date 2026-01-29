@@ -138,7 +138,7 @@ Płytka **EletechSup ES32C14** wykorzystuje następujące piny GPIO ESP32-C3:
 - Do monitorowania używaj interfejsu WWW: `http://opec-esp32.local`
 - Piny GPIO1/GPIO3 są sprzętowo przypisane do UART0 i nie można ich zmienić
 
-📖 **Szczegółowa dokumentacja:** [MODBUS_PINS.md](MODBUS_PINS.md)
+📖 **Szczegółowa dokumentacja:** [MODBUS_PINS.md](MODBUS_PINS.md) | [English version](MODBUS_PINS_EN.md)
 
 ---
 
