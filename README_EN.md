@@ -16,6 +16,7 @@
 
 - [Project Description](#-project-description)
 - [Main Features](#-main-features)
+- [⚡ Modbus RS485 Pins](#-modbus-rs485-pins)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Initial Configuration](#-initial-configuration)
@@ -116,6 +117,28 @@
   - IP: `192.168.4.1`
 - **STA Mode:** Connection to home WiFi network
 - **mDNS:** Access via `http://opec-esp32.local`
+
+---
+
+## ⚡ Modbus RS485 Pins
+
+### 🔌 Which ESP32 pins are used for Modbus communication?
+
+The **EletechSup ES32C14** board uses the following ESP32-C3 GPIO pins:
+
+| GPIO Pin | RS485 Function | Description |
+|----------|----------------|-------------|
+| **GPIO1** | **TX** (Transmit) | Sending data to Modbus device |
+| **GPIO3** | **RX** (Receive) | Receiving data from Modbus device |
+| **GPIO22** | **DE/RE** (Direction Enable) | Transmission direction control (TX/RX) |
+
+### ⚠️ IMPORTANT NOTES:
+- ES32C14 has a **built-in RS485 converter** - no need for external MAX485 module!
+- **Serial Monitor will NOT work** during Modbus communication (shared pins with USB)
+- Use Web UI for monitoring: `http://opec-esp32.local`
+- GPIO1/GPIO3 pins are hardware-assigned to UART0 and cannot be changed
+
+📖 **Detailed documentation:** [MODBUS_PINS.md](MODBUS_PINS.md)
 
 ---
 
